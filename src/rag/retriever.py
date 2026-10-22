@@ -8,11 +8,11 @@ Run after building the index:
 from __future__ import annotations
 
 import argparse
-import sys
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Iterable
 
+from src.console import configure_utf8_output
 from src.rag.build_index import (
     CHROMA_DIR,
     COLLECTION_NAME,
@@ -161,9 +161,7 @@ def retrieve_context(
 
 def main() -> None:
     """Print retrieved context so it can be checked independently of the LLM."""
-    for stream in (sys.stdout, sys.stderr):
-        if hasattr(stream, "reconfigure"):
-            stream.reconfigure(encoding="utf-8")
+    configure_utf8_output()
     parser = argparse.ArgumentParser(
         description="Tìm các quy tắc nghiệp vụ liên quan trong ChromaDB cục bộ"
     )
