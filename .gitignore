@@ -12,3 +12,5 @@ data/processed/
 data/database/
 data/chroma/
 .pytest-tmp/
+benchmarks/results/
+.streamlit/secrets.toml

@@ -2,15 +2,16 @@
 
 Run from the repository root after installing the project requirements:
 
-    streamlit run app.py
+    python -m streamlit run app.py
 
 The application never executes a candidate query unless the SQL validator has
-approved it. DuckDB is opened in read-only mode for every execution.
+approved it. DuckDB is opened read-only with external resource access disabled.
 """
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+import logging
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
@@ -21,6 +22,7 @@ ROOT = Path(__file__).resolve().parent
 DB_PATH = ROOT / "data" / "database" / "olist.duckdb"
 MAX_DISPLAY_ROWS = 1_000
 MAX_CHART_ROWS = 50
+LOGGER = logging.getLogger(__name__)
 _METRIC_NAME_HINTS = (
     "average",
     "avg",
@@ -52,10 +54,37 @@ class QueryOutcome:
     sql: str | None = None
     context: str | None = None
     valid: bool = False
-    errors: list[str] | None = None
-    warnings: list[str] | None = None
+    errors: list[str] = field(default_factory=list)
+    warnings: list[str] = field(default_factory=list)
     dataframe: Any | None = None
     truncated: bool = False
+
+
+_SAFE_RUNTIME_ERROR_PREFIXES = (
+    "Chưa có chỉ mục",
+    "Chỉ mục được tạo bằng model",
+    "Database không có bảng",
+    "Database Olist không chứa bảng",
+    "GEMINI_API_KEY",
+    "GEMINI_MODEL",
+    "Gemini không trả về",
+    "Thiếu thư viện",
+    "Thiếu sqlglot",
+)
+_GENERIC_QUERY_ERROR = (
+    "Không thể hoàn tất câu hỏi. Hãy kiểm tra database Olist, chỉ mục RAG "
+    "và cấu hình Gemini rồi thử lại."
+)
+
+
+def _user_facing_error(error: Exception) -> str:
+    """Return actionable expected errors without exposing unexpected internals."""
+    message = str(error).strip()
+    if isinstance(error, (FileNotFoundError, ValueError)):
+        return message or "Dữ liệu đầu vào không hợp lệ."
+    if isinstance(error, RuntimeError) and message.startswith(_SAFE_RUNTIME_ERROR_PREFIXES):
+        return message
+    return _GENERIC_QUERY_ERROR
 
 
 def execute_read_only_query(sql: str, db_path: Path = DB_PATH) -> tuple[Any, bool]:
@@ -67,7 +96,7 @@ def execute_read_only_query(sql: str, db_path: Path = DB_PATH) -> tuple[Any, boo
     """
     if not db_path.is_file():
         raise FileNotFoundError(
-            "Chưa có database Olist. Hãy chạy python src/database/load_data.py trước."
+            "Chưa có database Olist. Hãy chạy python -m src.database.load_data trước."
         )
 
     display_sql = (
@@ -90,7 +119,7 @@ def execute_read_only_query(sql: str, db_path: Path = DB_PATH) -> tuple[Any, boo
 
 def answer_question(question: str, *, use_rag: bool) -> QueryOutcome:
     """Generate, validate, then (only if approved) execute a candidate query."""
-    outcome = QueryOutcome(question=question, errors=[], warnings=[])
+    outcome = QueryOutcome(question=question)
     try:
         from src.llm.text_to_sql import generate_sql, get_schema
         from src.validation.sql_validator import validate_sql
@@ -119,9 +148,14 @@ def answer_question(question: str, *, use_rag: bool) -> QueryOutcome:
             validation.sql, DB_PATH
         )
         return outcome
-    except Exception as error:  # The UI must make every failure understandable.
+    except Exception as error:  # Keep unexpected implementation details out of the UI.
+        message = _user_facing_error(error)
+        if message == _GENERIC_QUERY_ERROR:
+            LOGGER.exception("Failed to answer a TrustQuery question")
+        else:
+            LOGGER.info("TrustQuery request could not be completed: %s", message)
         outcome.valid = False
-        outcome.errors.append(str(error) or error.__class__.__name__)
+        outcome.errors.append(message)
         return outcome
 
 
@@ -159,9 +193,9 @@ def render_outcome(st: Any, outcome: QueryOutcome, *, show_context: bool) -> Non
     elif outcome.sql:
         st.error("SQL bị từ chối — không có truy vấn nào được thực thi.")
 
-    for warning in outcome.warnings or []:
+    for warning in outcome.warnings:
         st.warning(warning)
-    for error in outcome.errors or []:
+    for error in outcome.errors:
         st.error(error)
 
     if show_context and outcome.context:

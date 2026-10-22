@@ -13,6 +13,7 @@ from src.validation.sql_validator import load_allowed_schema, validate_sql
 
 ROOT = Path(__file__).resolve().parents[1]
 DB_PATH = ROOT / "data" / "database" / "olist.duckdb"
+pytestmark = pytest.mark.requires_olist_database
 
 
 @pytest.mark.parametrize(

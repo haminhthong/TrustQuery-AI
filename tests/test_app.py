@@ -4,9 +4,11 @@ from __future__ import annotations
 
 import app
 import pandas as pd
+import pytest
 import src.llm.text_to_sql as text_to_sql
 
 
+@pytest.mark.requires_olist_database
 def test_execute_read_only_query_returns_olist_results() -> None:
     dataframe, truncated = app.execute_read_only_query(
         "SELECT COUNT(*) AS total_orders FROM orders"
@@ -29,6 +31,14 @@ def test_chart_is_shown_only_for_a_small_metric_result() -> None:
     ) is None
 
 
+def test_unexpected_error_does_not_leak_implementation_details() -> None:
+    message = app._user_facing_error(RuntimeError("C:/private/path/api-token"))
+
+    assert "C:/private" not in message
+    assert "Không thể hoàn tất" in message
+
+
+@pytest.mark.requires_olist_database
 def test_invalid_generated_sql_is_never_executed(monkeypatch) -> None:
     monkeypatch.setattr(text_to_sql, "get_schema", lambda _db_path: "orders: order_id")
     monkeypatch.setattr(
