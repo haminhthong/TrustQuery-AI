@@ -55,10 +55,10 @@ Kết quả cần có đoạn nói rằng khách mua lại được nhóm theo
 
 ```powershell
 # A — schema cố định, đúng hành vi trước khi thêm RAG
-python src/llm/text_to_sql.py "Có bao nhiêu khách hàng đã mua lại?"
+python -m src.llm.text_to_sql "Có bao nhiêu khách hàng đã mua lại?"
 
 # B — schema cộng với các quy tắc nghiệp vụ truy xuất được
-python src/llm/text_to_sql.py --use-rag "Có bao nhiêu khách hàng đã mua lại?"
+python -m src.llm.text_to_sql --use-rag "Có bao nhiêu khách hàng đã mua lại?"
 ```
 
 Cả hai lệnh chỉ in SQL đề xuất. Chúng vẫn cần được kiểm tra bởi con người và
@@ -75,7 +75,7 @@ python -m src.evaluation.compare_rag
 
 Lệnh sử dụng đúng một `benchmarks/questions.json` cho cả hai phiên bản, sau
 đó tạo `benchmarks/results/rag_comparison.json`. Báo cáo giữ lại `reference_sql`,
-ngữ cảnh RAG và hai SQL candidate; hãy đối chiếu ngữ nghĩa/graint thay vì so
+ngữ cảnh RAG và hai SQL được sinh; hãy đối chiếu ngữ nghĩa/grain thay vì so
 sánh chuỗi SQL. Có thể chạy một ca trọng tâm, ví dụ:
 
 ```powershell
