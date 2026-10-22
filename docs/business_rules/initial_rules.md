@@ -6,8 +6,8 @@ Trạng thái: bản khởi đầu để đánh giá câu SQL. Các quy tắc n�
 
 - Không sửa, xóa, điền giá trị thiếu hoặc ghi đè tệp trong `data/raw/`.
 - Giá trị thiếu không mặc định là lỗi. Ví dụ, đơn chưa giao có thể không có thời điểm giao thực tế.
-- Database dùng cho các truy vấn của AI phải được mở ở chế độ chỉ đọc (`read_only=True`).
-- SQL do LLM tạo chỉ là đề xuất ở giai đoạn này: phải được người dùng đọc, xác nhận an toàn và chạy thủ công. Không cấp cho LLM quyền tự sửa hoặc xóa dữ liệu.
+- Database dùng cho các truy vấn của AI phải được mở ở chế độ chỉ đọc (`read_only=True`) và không được phép truy cập nguồn dữ liệu bên ngoài.
+- CLI Text-to-SQL chỉ in SQL đề xuất để kiểm tra. Giao diện Streamlit chỉ thực thi SQL sau khi bộ validator đầy đủ chấp thuận, trên kết nối chỉ đọc; không cấp cho LLM quyền sửa hoặc xóa dữ liệu.
 
 ## Đơn vị phân tích
 
