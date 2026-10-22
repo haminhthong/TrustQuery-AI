@@ -1,0 +1,58 @@
+[
+  {
+    "id": "Q001",
+    "question_vi": "Tổng số đơn hàng là bao nhiêu?",
+    "question_en": "How many orders are there?",
+    "difficulty": "easy",
+    "reference_sql": "SELECT COUNT(*) AS total_orders FROM orders"
+  },
+  {
+    "id": "Q002",
+    "question_vi": "Có bao nhiêu đơn đã được giao?",
+    "question_en": "How many orders have been delivered?",
+    "difficulty": "easy",
+    "reference_sql": "SELECT COUNT(*) AS delivered_orders FROM orders WHERE order_status = 'delivered'"
+  },
+  {
+    "id": "Q003",
+    "question_vi": "Những năm nào có đơn hàng?",
+    "question_en": "Which years have orders?",
+    "difficulty": "easy",
+    "reference_sql": "SELECT YEAR(order_purchase_timestamp) AS year, COUNT(*) AS total_orders FROM orders GROUP BY YEAR(order_purchase_timestamp) ORDER BY year"
+  },
+  {
+    "id": "Q004",
+    "question_vi": "Top 5 danh mục có nhiều sản phẩm được bán nhất?",
+    "question_en": "What are the top 5 product categories by number of items sold?",
+    "difficulty": "medium",
+    "reference_sql": "SELECT p.product_category_name AS category, COUNT(*) AS items_sold FROM order_items oi JOIN products p ON oi.product_id = p.product_id GROUP BY p.product_category_name ORDER BY items_sold DESC LIMIT 5"
+  },
+  {
+    "id": "Q005",
+    "question_vi": "Giá trị thanh toán của các đơn đã giao theo năm?",
+    "question_en": "What is the total payment value of delivered orders by purchase year?",
+    "difficulty": "medium",
+    "reference_sql": "SELECT YEAR(o.order_purchase_timestamp) AS year, SUM(op.payment_value) AS total_payment FROM orders o JOIN order_payments op ON o.order_id = op.order_id WHERE o.order_status = 'delivered' GROUP BY YEAR(o.order_purchase_timestamp) ORDER BY year"
+  },
+  {
+    "id": "Q006",
+    "question_vi": "Có bao nhiêu khách hàng đã mua lại?",
+    "question_en": "How many customers made more than one purchase?",
+    "difficulty": "medium",
+    "reference_sql": "SELECT COUNT(*) AS repeat_customers FROM (SELECT c.customer_unique_id FROM orders o JOIN customers c ON o.customer_id = c.customer_id GROUP BY c.customer_unique_id HAVING COUNT(DISTINCT o.order_id) > 1) AS repeat_customer_ids"
+  },
+  {
+    "id": "Q007",
+    "question_vi": "Có bao nhiêu khách hàng duy nhất đã mua hàng?",
+    "question_en": "How many unique customers have purchased?",
+    "difficulty": "medium",
+    "reference_sql": "SELECT COUNT(DISTINCT c.customer_unique_id) AS unique_customers FROM orders o JOIN customers c ON o.customer_id = c.customer_id"
+  },
+  {
+    "id": "Q008",
+    "question_vi": "Có bao nhiêu đơn hàng được giao trễ?",
+    "question_en": "How many orders were delivered late?",
+    "difficulty": "medium",
+    "reference_sql": "SELECT COUNT(DISTINCT order_id) AS late_deliveries FROM orders WHERE order_status = 'delivered' AND order_delivered_customer_date IS NOT NULL AND order_estimated_delivery_date IS NOT NULL AND order_delivered_customer_date > order_estimated_delivery_date"
+  }
+]
