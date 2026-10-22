@@ -72,7 +72,7 @@ def load_allowed_schema(db_path: Path = DB_PATH) -> dict[str, set[str]]:
     db_path = Path(db_path)
     if not db_path.is_file():
         raise FileNotFoundError(
-            "Chưa có database Olist. Hãy chạy python src/database/load_data.py trước."
+            "Chưa có database Olist. Hãy chạy python -m src.database.load_data trước."
         )
 
     connection = connect_read_only(db_path)
