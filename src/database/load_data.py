@@ -1,7 +1,7 @@
 """Load the nine Olist CSV files into a local DuckDB database.
 
 Run from the repository root:
-    python src/database/load_data.py
+    python -m src.database.load_data
 """
 
 from __future__ import annotations
@@ -10,6 +10,7 @@ from pathlib import Path
 
 import duckdb
 
+from src.console import configure_utf8_output
 
 ROOT = Path(__file__).resolve().parents[2]
 RAW_DIR = ROOT / "data" / "raw"
@@ -82,6 +83,7 @@ def load_data(raw_dir: Path = RAW_DIR, db_path: Path = DB_PATH) -> None:
 
 
 def main() -> None:
+    configure_utf8_output()
     load_data()
 
 
