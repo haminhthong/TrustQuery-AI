@@ -1,12 +1,12 @@
 """Generate a candidate DuckDB query from a natural-language question.
 
-The prototype deliberately does *not* execute generated SQL.  It retrieves the
-local schema, asks Gemini for one read-only query, and prints that query for a
-human to inspect and run manually.
+This CLI retrieves the local schema, asks Gemini for one read-only query, and
+prints the candidate without executing it. The Streamlit application performs
+the separate validation and read-only execution workflow.
 
 Run from the repository root:
-    python src/llm/text_to_sql.py
-    python src/llm/text_to_sql.py "Có bao nhiêu đơn hàng được giao trong năm 2018?"
+    python -m src.llm.text_to_sql
+    python -m src.llm.text_to_sql "Có bao nhiêu đơn hàng được giao trong năm 2018?"
 """
 
 from __future__ import annotations
@@ -25,6 +25,7 @@ ROOT = Path(__file__).resolve().parents[2]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
+from src.console import configure_utf8_output
 from src.validation.sql_safety import UnsafeSQLError, ensure_read_only_sql
 from src.rag.build_index import EMBEDDING_MODEL
 from src.database.load_data import TABLES as OLIST_TABLES
@@ -44,7 +45,7 @@ def get_schema(db_path: Path = DB_PATH) -> str:
     """Read table and column metadata from the local database, read-only."""
     if not db_path.is_file():
         raise FileNotFoundError(
-            "Chưa có database. Hãy chạy python src/database/load_data.py trước."
+            "Chưa có database. Hãy chạy python -m src.database.load_data trước."
         )
 
     connection = connect_read_only(db_path)
@@ -151,9 +152,7 @@ def generate_sql(question: str, schema: str, context: str | None = None) -> str:
 
 
 def main() -> None:
-    for stream in (sys.stdout, sys.stderr):
-        if hasattr(stream, "reconfigure"):
-            stream.reconfigure(encoding="utf-8")
+    configure_utf8_output()
     parser = argparse.ArgumentParser(
         description="Sinh SQL DuckDB để con người kiểm tra thủ công; không tự thực thi SQL."
     )
@@ -194,7 +193,7 @@ def main() -> None:
     print(sql)
     if arguments.use_rag:
         print("\nĐã dùng ngữ cảnh quy tắc nghiệp vụ do RAG truy xuất.")
-    print("\nHãy đọc và xác nhận SQL trước khi chạy thủ công trên database read-only.")
+    print("\nĐây là SQL đề xuất từ CLI; giao diện Streamlit sẽ xác thực đầy đủ trước khi thực thi.")
 
 
 if __name__ == "__main__":
