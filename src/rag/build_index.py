@@ -15,12 +15,12 @@ from __future__ import annotations
 import argparse
 import hashlib
 import re
-import sys
 from dataclasses import dataclass
 from functools import lru_cache
 from pathlib import Path
 from typing import Any, Iterable, Sequence
 
+from src.console import configure_utf8_output
 
 ROOT = Path(__file__).resolve().parents[2]
 BUSINESS_RULES_DIR = ROOT / "docs" / "business_rules"
@@ -242,9 +242,7 @@ def build_index(
 
 def main() -> None:
     """Build the local index from the command line."""
-    for stream in (sys.stdout, sys.stderr):
-        if hasattr(stream, "reconfigure"):
-            stream.reconfigure(encoding="utf-8")
+    configure_utf8_output()
     parser = argparse.ArgumentParser(
         description="Lập chỉ mục ChromaDB cục bộ từ docs/business_rules/*.md"
     )
