@@ -13,11 +13,11 @@ from __future__ import annotations
 
 import argparse
 import json
-import sys
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+from src.console import configure_utf8_output
 from src.llm.text_to_sql import generate_sql, get_schema
 from src.rag.build_index import EMBEDDING_MODEL
 from src.rag.retriever import retrieve_context
@@ -89,9 +89,7 @@ def compare_questions(
 
 def main() -> None:
     """Run the shared benchmark twice and save auditable comparison data."""
-    for stream in (sys.stdout, sys.stderr):
-        if hasattr(stream, "reconfigure"):
-            stream.reconfigure(encoding="utf-8")
+    configure_utf8_output()
     parser = argparse.ArgumentParser(
         description="So sánh Text-to-SQL schema-only và RAG trên cùng benchmark"
     )
