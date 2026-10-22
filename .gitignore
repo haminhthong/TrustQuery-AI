@@ -1,0 +1,14 @@
+.venv/
+.env
+__pycache__/
+.pytest_cache/
+*.py[cod]
+.coverage
+htmlcov/
+
+# Local Olist artifacts: source data, derived data, and DuckDB files can be large.
+data/raw/
+data/processed/
+data/database/
+data/chroma/
+.pytest-tmp/
