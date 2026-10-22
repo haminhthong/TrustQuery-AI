@@ -1,7 +1,7 @@
 """Print a non-destructive profile for every required Olist CSV file.
 
 Run from the repository root:
-    python src/database/inspect_data.py
+    python -m src.database.inspect_data
 """
 
 from __future__ import annotations
@@ -10,21 +10,13 @@ from pathlib import Path
 
 import pandas as pd
 
+from src.console import configure_utf8_output
+from src.database.load_data import TABLES
+
 
 ROOT = Path(__file__).resolve().parents[2]
 DATA_DIR = ROOT / "data" / "raw"
-
-EXPECTED_FILES = (
-    "olist_customers_dataset.csv",
-    "olist_geolocation_dataset.csv",
-    "olist_order_items_dataset.csv",
-    "olist_order_payments_dataset.csv",
-    "olist_order_reviews_dataset.csv",
-    "olist_orders_dataset.csv",
-    "olist_products_dataset.csv",
-    "olist_sellers_dataset.csv",
-    "product_category_name_translation.csv",
-)
+EXPECTED_FILES = tuple(TABLES.values())
 
 
 def find_csv_files(data_dir: Path = DATA_DIR) -> list[Path]:
@@ -66,6 +58,7 @@ def inspect_file(file: Path) -> None:
 
 
 def main() -> None:
+    configure_utf8_output()
     csv_files = find_csv_files()
     print(f"Tìm thấy {len(csv_files)} file CSV\n")
     for file in csv_files:
