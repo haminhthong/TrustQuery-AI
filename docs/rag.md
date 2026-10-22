@@ -4,6 +4,9 @@ RAG bổ sung định nghĩa nghiệp vụ đã được quản trị vào Text-
 thay thế schema và không tự chạy SQL. Chế độ mặc định vẫn là **A**
 (schema-only) để có thể so sánh công bằng với **B** (schema + RAG).
 
+> Cơ sở lý thuyết và các nghiên cứu khoa học liên quan (BIRD Benchmark, Knowledge Injection, RAG Content Balancing) được trình bày chi tiết tại [docs/scientific_foundations.md](scientific_foundations.md).
+
+
 ## Thành phần
 
 - `docs/business_rules/*.md`: nguồn tri thức đã được kiểm soát phiên bản.

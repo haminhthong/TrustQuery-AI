@@ -122,15 +122,22 @@ def extract_sql(response_text: str) -> str:
     return (fenced.group(1) if fenced else text).strip()
 
 
-def generate_sql(question: str, schema: str, context: str | None = None) -> str:
+def generate_sql(
+    question: str,
+    schema: str,
+    context: str | None = None,
+    *,
+    api_key: str | None = None,
+    model: str | None = None,
+) -> str:
     """Call Gemini and validate the returned candidate query; never execute it."""
     load_dotenv(ENV_PATH)
-    api_key = os.getenv("GEMINI_API_KEY", "").strip()
-    model = os.getenv("GEMINI_MODEL", "").strip()
-    if not api_key:
-        raise RuntimeError("GEMINI_API_KEY chưa được cấu hình trong .env.")
-    if not model:
-        raise RuntimeError("GEMINI_MODEL chưa được cấu hình trong .env.")
+    resolved_api_key = (api_key or os.getenv("GEMINI_API_KEY", "")).strip()
+    resolved_model = (model or os.getenv("GEMINI_MODEL", "")).strip()
+    if not resolved_api_key:
+        raise RuntimeError("GEMINI_API_KEY chưa được cấu hình trong .env hoặc giao diện.")
+    if not resolved_model:
+        raise RuntimeError("GEMINI_MODEL chưa được cấu hình trong .env hoặc giao diện.")
 
     try:
         from google import genai

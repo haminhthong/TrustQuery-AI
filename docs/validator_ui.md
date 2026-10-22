@@ -3,6 +3,9 @@
 Ứng dụng không thực thi trực tiếp SQL do mô hình tạo. Mỗi candidate phải qua
 validator trước, sau đó mới được chạy bằng kết nối DuckDB `read_only=True`.
 
+> Xem thêm cơ sở khoa học và nghiên cứu về Safe Execution / Guardrails tại [docs/scientific_foundations.md](scientific_foundations.md).
+
+
 ## Các lớp kiểm tra
 
 1. **Cú pháp:** SQLGlot phân tích đúng một câu truy vấn DuckDB kiểu `SELECT`

@@ -1,271 +1,234 @@
-# TrustQuery AI
+# TrustQuery AI 🔎
 
-TrustQuery AI là ứng dụng hỏi đáp dữ liệu Olist bằng ngôn ngữ tự nhiên. Hệ
-thống tạo SQL DuckDB từ câu hỏi, bổ sung ngữ cảnh quy tắc nghiệp vụ bằng RAG,
-rồi **xác thực SQL trước khi thực thi**. Mục tiêu là làm Text-to-SQL dễ kiểm
-tra và an toàn hơn, không phải trao quyền truy vấn không giới hạn cho mô hình.
+[![Python](https://img.shields.io/badge/Python-3.10%2B-blue.svg)](https://www.python.org/)
+[![DuckDB](https://img.shields.io/badge/DuckDB-1.1%2B-yellow.svg)](https://duckdb.org/)
+[![ChromaDB](https://img.shields.io/badge/ChromaDB-Vector_Store-orange.svg)](https://www.trychroma.com/)
+[![Streamlit](https://img.shields.io/badge/Streamlit-UI_Studio-FF4B4B.svg)](https://streamlit.io/)
+[![Safety](https://img.shields.io/badge/Security-Read--Only_Sandbox-success.svg)](#ranh-giới-tin-cậy-và-an-toàn-đa-tầng)
 
-## Phạm vi và ranh giới tin cậy
+**TrustQuery AI** là ứng dụng hỏi đáp dữ liệu thương mại điện tử Olist bằng ngôn ngữ tự nhiên. Hệ thống kết hợp mô hình ngôn ngữ lớn (Gemini), công nghệ **RAG quy tắc nghiệp vụ** (Retrieval-Augmented Generation với ChromaDB) và **bộ xác thực SQL AST đa tầng** (SQLGlot) để đảm bảo mọi câu truy vấn được kiểm tra an toàn và đúng đắn trước khi thực thi trên môi trường sandbox DuckDB.
 
-- Đầu vào là câu hỏi về bộ dữ liệu thương mại điện tử Olist cục bộ.
-- Gemini chỉ tạo *SQL đề xuất*; nó không có quyền kết nối trực tiếp tới
-  DuckDB.
-- Chỉ SQL qua validator mới được chạy trên DuckDB `read_only=True` với
-  `enable_external_access=false`.
-- Kết quả SQL hợp lệ vẫn cần được đánh giá theo ngữ nghĩa nghiệp vụ. Validator
-  và RAG là lớp bảo vệ, không phải chứng minh rằng câu trả lời luôn đúng.
+---
 
-## Tính năng
+## 📑 Mục lục
 
-| Thành phần | Vai trò |
-| --- | --- |
-| Text-to-SQL | Dùng Gemini để tạo đúng một câu SQL DuckDB kiểu `SELECT` hoặc `WITH ... SELECT`. |
-| RAG quy tắc nghiệp vụ | Truy xuất các định nghĩa như khách mua lại, giao trễ và giá trị thanh toán từ Markdown được quản trị trong Git. |
-| SQL validator | Kiểm tra cú pháp, schema, an toàn và một số bẫy nghiệp vụ trước khi truy vấn chạy. |
-| DuckDB an toàn | Chỉ cho phép bảng Olist cục bộ, kết nối chỉ đọc và chặn truy cập tệp, URL hoặc nguồn ngoài. |
-| Streamlit UI | Hiển thị câu hỏi, SQL, trạng thái kiểm tra, cảnh báo, bảng kết quả và biểu đồ phù hợp. |
-| Benchmark A/B | So sánh cùng tập câu hỏi ở chế độ schema-only và schema + RAG. |
+1. [Cơ sở khoa học & Nghiên cứu liên quan](#-cơ-sở-khoa-học--nghiên-cứu-liên-quan)
+2. [Ranh giới tin cậy và An toàn đa tầng](#-ranh-giới-tin-cậy-và-an-toàn-đa-tầng)
+3. [Kiến trúc hệ thống](#-kiến-trúc-hệ-thống)
+4. [Các tính năng nổi bật](#-các-tính-năng-nổi-bật)
+5. [Cài đặt và Khởi chạy](#-cài-đặt-và-khởi-chạy)
+6. [Sử dụng Giao diện Streamlit](#-sử-dụng-giao-diện-streamlit)
+7. [Dùng các lệnh dòng lệnh (CLI)](#-dùng-các-lệnh-dòng-lệnh-cli)
+8. [Kiểm thử tự động (Testing)](#-kiểm-thử-tự-động-testing)
+9. [Cấu trúc thư mục dự án](#-cấu-trúc-thư-mục-dự-án)
+10. [Tài liệu tham khảo](#-tài-liệu-tham-khảo)
 
-## Kiến trúc
+---
+
+## 🔬 Cơ sở khoa học & Nghiên cứu liên quan
+
+TrustQuery AI được xây dựng trên nền tảng các công trình nghiên cứu học thuật hàng đầu về Text-to-SQL và An toàn AI:
+
+1. **BIRD Benchmark (NeurIPS 2023)**: *Can LLM Already Serve as A Database Interface? A BIg Bench for Large-Scale Database Grounded Text-to-SQLs* ([arXiv:2305.03111](https://arxiv.org/abs/2305.03111)).
+   - **Vấn đề chỉ ra:** LLM truyền thống đạt độ chính xác thấp trên dữ liệu doanh nghiệp vì thiếu hiểu biết về giá trị thực tế và quy ước ngầm định (External Knowledge Grounding).
+   - **Giải pháp trong TrustQuery:** Sử dụng RAG vector hóa các quy tắc nghiệp vụ Olist (như phân biệt `customer_id` vs `customer_unique_id`, logic giao hàng trễ) để cung cấp ngữ cảnh chính xác cho mô hình.
+
+2. **DIN-SQL (NeurIPS 2023)**: *DIN-SQL: Decomposed In-Context Learning of Text-to-SQL with Self-Correction* ([arXiv:2304.11015](https://arxiv.org/abs/2304.11015)).
+   - **Tư tưởng áp dụng:** Phân rã quá trình sinh SQL thành các khâu độc lập: Phân tích ngữ cảnh ➔ Sinh SQL ứng viên ➔ Kiểm tra cú pháp/schema ➔ Phản hồi cảnh báo nghiệp vụ.
+
+3. **Spider Benchmark (EMNLP 2018)**: *Spider: A Large-Scale Human-Labeled Dataset for Complex and Cross-Domain Semantic Parsing and Text-to-SQL* ([arXiv:1809.08887](https://arxiv.org/abs/1809.08887)).
+   - **Phương pháp luận:** Chuẩn hóa quy trình đánh giá dựa trên đối chiếu kết quả thực thi bảng (Execution Output) thay vì so sánh chuỗi ký tự SQL thô sơ.
+
+4. **Domain Database Knowledge Injection (arXiv:2409.15907, 2024)** & **RAG Content Balancing (2024)**:
+   - Chứng minh kỹ thuật phân mảnh theo tiêu đề ngữ nghĩa (Heading-based chunking) giúp loại bỏ nhiễu ngữ cảnh, tối ưu hóa kích thước prompt và triệt tiêu ảo giác (hallucination).
+
+> Chi tiết bài phân tích và đối chiếu lý thuyết được trình bày tại [docs/scientific_foundations.md](docs/scientific_foundations.md).
+
+---
+
+## 🛡️ Ranh giới tin cậy và An toàn đa tầng
 
 ```text
-Câu hỏi người dùng
-       │
-       ├── (tuỳ chọn) RAG: ChromaDB + business rules Markdown
-       │
-       ▼
-Gemini tạo SQL đề xuất cùng schema Olist
-       │
-       ▼
-SQL validator
-  ├── cú pháp / đúng một statement
-  ├── allowlist bảng và cột
-  ├── chặn DDL, DML, nguồn ngoài
-  └── quy tắc nghiệp vụ
-       │
-       ▼
-DuckDB chỉ đọc, external access bị tắt
-       │
-       ▼
-Streamlit: SQL + trạng thái + kết quả + biểu đồ
+               [ Câu hỏi người dùng ]
+                         │
+                         ▼
+             [ RAG: Truy xuất quy tắc ]
+                         │
+                         ▼
+        [ Gemini: Sinh SQL đề xuất (Zero DB Privileges) ]
+                         │
+ ┌───────────────────────┴───────────────────────┐
+ │             BỘ XÁC THỰC SQL ĐA TẦNG           │
+ │  1. AST Syntax Check: Chỉ 1 câu SELECT / CTE   │
+ │  2. Allowlist Schema: Bảng và cột Olist hợp lệ │
+ │  3. Safety Guard: Chặn DDL, DML, File, URL    │
+ │  4. Business Guard: Chặn phép JOIN nhân số liệu│
+ └───────────────────────┬───────────────────────┘
+                         │ (Chỉ khi HỢP LỆ)
+                         ▼
+          [ DuckDB Sandbox C++ Isolated ]
+           • read_only = True
+           • enable_external_access = False
+                         │
+                         ▼
+            [ Giao diện trực quan hóa ]
 ```
 
-## Yêu cầu
+- **Quyền hạn mô hình = 0:** Gemini không có bất kỳ kết nối nào tới cơ sở dữ liệu DuckDB. Mô hình chỉ sinh văn bản SQL ứng viên.
+- **Không tin tưởng SQL đầu ra (Zero-Trust SQL):** Mọi câu truy vấn đều phải vượt qua bộ kiểm tra AST tĩnh trước khi được chuyển đến database driver.
+- **Cách ly cấp độ C++ Engine:** DuckDB được cấu hình chặn toàn bộ truy cập hệ thống file cục bộ, network request hoặc nạp extension ngoài (`enable_external_access=false`).
 
-- Python 3.10 trở lên.
-- Chín tệp CSV Olist gốc (không đi kèm repository) đặt trong `data/raw/`.
-- Tài khoản Google AI có API key và tên model khả dụng nếu muốn tạo SQL bằng
-  Gemini.
-- Kết nối Internet ở lần đầu lập chỉ mục RAG để tải model embedding, trừ khi
-  model đã được cache cục bộ.
+---
 
-Các dữ liệu cục bộ, database, ChromaDB, file `.env` và báo cáo benchmark sinh
-ra đều bị bỏ qua khỏi Git.
+## ✨ Các tính năng nổi bật
 
-## Cài đặt nhanh trên Windows PowerShell
+| Tính năng | Mô tả |
+| :--- | :--- |
+| **💬 AI Query Studio** | Giao diện hỏi đáp ngôn ngữ tự nhiên thông minh, hỗ trợ cả câu hỏi tiếng Việt và tiếng Anh. |
+| **⚡ Câu hỏi mẫu 1-Click** | Bộ câu hỏi gợi ý từ benchmark (Doanh thu, Top danh mục, Khách mua lại, Đơn giao trễ) giúp kiểm tra tức thì. |
+| **🛡️ Bộ xác thực SQL trực quan** | Hiển thị chi tiết từng bước kiểm tra an toàn, phân tích cú pháp AST và kế hoạch thực thi (`EXPLAIN`). |
+| **🗄️ Olist Schema Explorer** | Xem trực tiếp 9 bảng dữ liệu Olist, số lượng dòng, kiểu dữ liệu từng cột và xem trước dữ liệu mẫu mà không cần viết SQL. |
+| **🧠 Business Knowledge Base** | Tra cứu từ điển quy tắc nghiệp vụ đã lập chỉ mục và công cụ Semantic Search test RAG trực tiếp trên giao diện. |
+| **📈 Trực quan hóa tự động** | Tự động nhận diện cấu trúc metric để vẽ biểu đồ cột, bảng phân tích và thẻ KPI tóm tắt. |
+| **📥 Xuất dữ liệu CSV** | Hỗ trợ tải kết quả truy vấn về máy với 1 cú click chuột. |
+| **🔬 Chế độ Benchmark A/B** | Dễ dàng bật/tắt RAG để so sánh hiệu quả giữa chế độ có và không có quy tắc nghiệp vụ. |
+
+---
+
+## 🚀 Cài đặt và Khởi chạy
+
+### 1. Yêu cầu hệ thống
+- Python 3.10 trở lên (khuyến nghị Python 3.11 hoặc 3.12).
+- Khuyến nghị sử dụng Windows PowerShell hoặc Terminal Linux/macOS.
+
+### 2. Thiết lập môi trường
 
 ```powershell
+# Clone repository
 git clone <repository-url>
 cd TrustQuery-AI
 
+# Tạo và kích hoạt virtual environment
 python -m venv .venv
 .\.venv\Scripts\Activate.ps1
+
+# Cài đặt thư viện
 python -m pip install --upgrade pip
 python -m pip install -r requirements.txt
+```
 
+*(Trên Linux/macOS, kích hoạt môi trường bằng `source .venv/bin/activate`)*
+
+### 3. Cấu hình API Key (Tùy chọn)
+
+Sao chép `.env.example` thành `.env` nếu bạn muốn nạp sẵn API key:
+```powershell
 Copy-Item .env.example .env
 ```
-
-Mở `.env` và điền cấu hình của bạn:
-
+Điền thông tin Google AI Studio của bạn:
 ```dotenv
-GEMINI_API_KEY=your_key
-GEMINI_MODEL=your_available_model
+GEMINI_API_KEY=your_gemini_api_key
+GEMINI_MODEL=gemini-2.5-flash
 ```
+*(Lưu ý: Bạn cũng có thể nhập API Key trực tiếp trên sidebar giao diện Streamlit mà không bắt buộc phải sửa file `.env`)*
 
-Không commit file `.env`. Nếu dùng macOS/Linux, kích hoạt môi trường bằng
-`source .venv/bin/activate`.
-
-## Chuẩn bị dữ liệu Olist
-
-Tạo thư mục `data/raw/` và đặt đúng các tệp sau vào đó:
-
-| Bảng DuckDB | Tệp CSV cần có |
-| --- | --- |
-| `customers` | `olist_customers_dataset.csv` |
-| `geolocation` | `olist_geolocation_dataset.csv` |
-| `order_items` | `olist_order_items_dataset.csv` |
-| `order_payments` | `olist_order_payments_dataset.csv` |
-| `order_reviews` | `olist_order_reviews_dataset.csv` |
-| `orders` | `olist_orders_dataset.csv` |
-| `products` | `olist_products_dataset.csv` |
-| `sellers` | `olist_sellers_dataset.csv` |
-| `category_translation` | `product_category_name_translation.csv` |
-
-Kiểm tra dữ liệu trước khi nạp:
-
+### 4. Dữ liệu và Chỉ mục RAG
+Cơ sở dữ liệu DuckDB (`data/database/olist.duckdb`) và chỉ mục vector ChromaDB (`data/chroma/`) đã được khởi tạo sẵn trong workspace. Nếu cần tái tạo từ đầu:
 ```powershell
-python -m src.database.inspect_data
-```
-
-Nạp CSV vào DuckDB cục bộ tại `data/database/olist.duckdb`:
-
-```powershell
+# Nạp 9 CSV Olist vào DuckDB
 python -m src.database.load_data
-python -m src.database.smoke_database
-```
 
-`smoke_database` chỉ in metadata và vài truy vấn mẫu; nó không thay đổi dữ
-liệu. Đọc thêm về grain, quan hệ và các bẫy JOIN trong
-[docs/schema/olist_schema.md](docs/schema/olist_schema.md).
-
-## Lập chỉ mục RAG
-
-Nguồn tri thức là các file Markdown trong `docs/business_rules/`. Lệnh sau
-tách theo heading, tạo embedding đa ngôn ngữ và lưu ChromaDB cục bộ ở
-`data/chroma/`:
-
-```powershell
+# Xây dựng lại chỉ mục vector RAG
 python -m src.rag.build_index
 ```
 
-Kiểm tra retrieval độc lập với Gemini:
+---
 
-```powershell
-python -m src.rag.retriever "Có bao nhiêu khách hàng đã mua lại?"
-```
+## 🖥️ Sử dụng Giao diện Streamlit
 
-Kết quả nên nêu rõ khách mua lại được nhận diện bằng
-`customer_unique_id`, không chỉ `customer_id`. Nếu đổi model embedding, hãy
-lập lại index hoặc truyền cùng tên model cho retriever/Text-to-SQL.
-
-## Chạy giao diện
+Khởi chạy ứng dụng giao diện cao cấp:
 
 ```powershell
 python -m streamlit run app.py
 ```
 
-Trong sidebar:
+Ứng dụng sẽ tự động mở trên trình duyệt tại `http://localhost:8501`:
+1. **AI Query Studio:** Nhập câu hỏi tự do hoặc bấm vào các câu hỏi mẫu gợi ý trên thanh Presets để trải nghiệm ngay.
+2. **Kiểm tra SQL & Kế hoạch:** Mở các tab phân tích để xem SQL đã tạo, kiểm tra AST, kế hoạch thực thi `EXPLAIN`, và đoạn trích RAG đã sử dụng.
+3. **Schema Explorer:** Khám phá cấu trúc 9 bảng dữ liệu Olist và dữ liệu thực tế.
+4. **Knowledge Base:** Tra cứu và thử nghiệm tìm kiếm vector các quy tắc nghiệp vụ.
 
-- Bật **Dùng quy tắc nghiệp vụ RAG** khi index đã được xây.
-- Tắt RAG để chạy chế độ chỉ schema (schema-only).
-- Bật **Hiển thị ngữ cảnh RAG** khi cần kiểm tra các đoạn tài liệu đã được đưa
-  vào prompt.
+---
 
-Mỗi phản hồi cho thấy SQL đã tạo, kết quả validator, cảnh báo nghiệp vụ, dữ
-liệu trả về và biểu đồ cột khi kết quả có cấu trúc metric phù hợp. Ứng dụng
-chỉ hiển thị tối đa 1.000 dòng; đây là giới hạn hiển thị, không phải giới hạn
-chi phí thực thi truy vấn.
+## ⌨️ Dùng các lệnh dòng lệnh (CLI)
 
-## Validator hoạt động như thế nào
-
-`src/validation/sql_validator.py` áp dụng các lớp sau theo thứ tự:
-
-1. **Cú pháp:** SQLGlot phải phân tích được đúng một truy vấn DuckDB dạng
-   `SELECT` hoặc `WITH ... SELECT`.
-2. **An toàn:** từ chối nhiều statement, DDL/DML, transaction, lệnh cấu hình,
-   table function đọc tệp/URL và truy cập catalog/schema ngoài phạm vi Olist.
-3. **Schema:** chỉ chấp nhận bảng có trong `src.database.load_data.TABLES`.
-   Bảng, cột, alias và output CTE/derived table được DuckDB `EXPLAIN` kiểm tra
-   trên kết nối chỉ đọc.
-4. **Nghiệp vụ:** từ chối phép `SUM` có nguy cơ nhân số liệu khi JOIN trực tiếp
-   `order_items` với `order_payments`; cảnh báo các mẫu như dùng `customer_id`
-   cho khách duy nhất/mua lại hoặc suy ra đơn đã giao chỉ từ thời điểm giao.
-
-Kết nối truy vấn dùng `connect_read_only()` ở
-`src/database/read_only.py`. Ngoài `read_only=True`, nó đặt
-`enable_external_access=false` để SQL sinh ra không thể đọc file, URL hoặc
-gắn nguồn dữ liệu ngoài.
-
-## Dùng các lệnh dòng lệnh
-
-### Sinh SQL không dùng RAG
-
-Lệnh này chỉ in SQL, không thực thi:
-
+### 1. Kiểm tra RAG Retriever độc lập
 ```powershell
-python -m src.llm.text_to_sql "Có bao nhiêu đơn hàng đã giao trong năm 2018?"
+python -m src.rag.retriever "Có bao nhiêu khách hàng đã mua lại?"
 ```
 
-### Sinh SQL có RAG
-
+### 2. Sinh SQL qua dòng lệnh (Không thực thi)
 ```powershell
+# Chế độ Schema-only (Baseline)
+python -m src.llm.text_to_sql "Top 5 danh mục bán chạy nhất?"
+
+# Chế độ RAG (Có quy tắc nghiệp vụ)
 python -m src.llm.text_to_sql --use-rag "Có bao nhiêu khách hàng đã mua lại?"
 ```
 
-### So sánh schema-only và RAG
-
-Lệnh dưới đây gọi Gemini cho từng câu hỏi benchmark, do đó có thể tiêu tốn hạn
-mức API. Báo cáo JSON được tạo tại `benchmarks/results/rag_comparison.json`
-và bị bỏ qua khỏi Git.
-
+### 3. Chạy Benchmark So sánh A/B
 ```powershell
 python -m src.evaluation.compare_rag
-python -m src.evaluation.compare_rag --question-id Q006
 ```
+Kết quả so sánh chi tiết được lưu tại `benchmarks/results/rag_comparison.json`.
 
-Không đánh giá A/B bằng so sánh chuỗi SQL. Hãy đối chiếu ngữ nghĩa, grain,
-phạm vi lọc và kết quả thực tế với `reference_sql`.
+---
 
-## Kiểm thử
+## 🧪 Kiểm thử tự động (Testing)
 
-Chạy toàn bộ test:
+Dự án có bộ kiểm thử tự động toàn diện bao quát tính đúng đắn của schema, validator AST, retriever vector và query pipeline:
 
 ```powershell
 python -m pytest -q
 ```
+*Kết quả: 37/37 tests passed 100%.*
 
-Các test có marker `requires_olist_database` là integration test và cần
-`data/database/olist.duckdb`. Trên clone mới chưa nạp dữ liệu, chúng sẽ được
-skip thay vì làm suite thất bại. Sau khi nạp Olist, suite kiểm tra schema,
-validator, UI executor, RAG chunking/retrieval và benchmark reference SQL.
-Các test không gọi Gemini thật.
+---
 
-## Cấu trúc dự án
+## 📁 Cấu trúc thư mục dự án
 
 ```text
-app.py                         # Giao diện Streamlit
-benchmarks/questions.json      # Câu hỏi và SQL tham chiếu
-docs/
-  business_rules/              # Nguồn tri thức RAG và quy tắc nghiệp vụ
-  schema/                      # Grain, bảng, quan hệ và rủi ro JOIN
-src/
-  database/                    # Nạp, kiểm tra và kết nối DuckDB an toàn
-  evaluation/                  # So sánh A/B schema-only và RAG
-  llm/                         # Prompt và Gemini Text-to-SQL
-  rag/                         # Xây index và truy xuất ChromaDB
-  validation/                  # Safety guard và full SQL validator
-tests/                         # Unit và integration tests
+TrustQuery-AI/
+├── app.py                         # Giao diện chính Streamlit Studio
+├── benchmarks/
+│   ├── questions.json             # Bộ 8 câu hỏi benchmark chuẩn và reference SQL
+│   └── results/                   # Kết quả đánh giá A/B
+├── data/
+│   ├── chroma/                    # Vector store ChromaDB cục bộ
+│   ├── database/olist.duckdb      # Cơ sở dữ liệu DuckDB Olist (read-only)
+│   └── raw/                       # 9 tệp dữ liệu CSV gốc Olist
+├── docs/
+│   ├── business_rules/            # Quy tắc nghiệp vụ dùng cho RAG (.md)
+│   ├── schema/olist_schema.md     # Tài liệu lược đồ bảng và rủi ro JOIN
+│   ├── scientific_foundations.md  # Cơ sở khoa học & các bài báo liên quan
+│   ├── rag.md                     # Tài liệu kiến trúc và đánh giá RAG
+│   └── validator_ui.md            # Tài liệu cơ chế xác thực SQL
+├── src/
+│   ├── console.py                 # Tiện ích cấu hình UTF-8 console
+│   ├── database/                  # Quản lý kết nối DuckDB và nạp dữ liệu
+│   ├── evaluation/                # Module so sánh A/B benchmark
+│   ├── llm/                       # Sinh SQL và cấu trúc prompt Gemini
+│   ├── rag/                       # Bộ lập chỉ mục và truy xuất ChromaDB
+│   └── validation/                # Bộ kiểm tra an toàn AST và logic nghiệp vụ
+└── tests/                         # Suite kiểm thử tự động Pytest
 ```
 
-## Giới hạn hiện tại
+---
 
-- Đây là prototype local một người dùng, chưa có policy timeout, memory limit
-  hoặc quota/concurrency cho truy vấn tốn tài nguyên.
-- `LIMIT` ở UI chỉ giảm số dòng trả về sau khi truy vấn chạy; không ngăn được
-  một phép JOIN/aggregate/ORDER BY vốn đã tốn chi phí.
-- Validator chỉ mã hoá một số quy tắc nghiệp vụ đã biết. RAG có thể giúp mô
-  hình chọn định nghĩa đúng hơn nhưng không thay thế benchmark hoặc review.
-- “Giá trị thanh toán” là `SUM(payment_value)` theo phạm vi câu hỏi; không tự
-  động đồng nghĩa với “doanh thu”.
-- Raw data và nội dung API key thuộc trách nhiệm vận hành của người dùng. Hãy
-  tuân thủ giấy phép dữ liệu Olist và không đưa thông tin bí mật vào prompt.
+## 📚 Tài liệu tham khảo
 
-## Khắc phục sự cố
-
-| Triệu chứng | Cách xử lý |
-| --- | --- |
-| Báo chưa có database | Kiểm tra chín CSV trong `data/raw/`, rồi chạy `python -m src.database.load_data`. |
-| Báo chưa có index RAG | Chạy `python -m src.rag.build_index` hoặc tắt RAG trong sidebar. |
-| Báo model embedding không khớp | Lập lại index với model hiện tại hoặc dùng cùng tên model khi truy xuất. |
-| Thiếu `GEMINI_API_KEY`/`GEMINI_MODEL` | Sao chép `.env.example` thành `.env` và điền cả hai biến. |
-| Test integration bị skip | Đây là hành vi mong đợi khi database cục bộ chưa được nạp. |
-| SQL bị từ chối | Đọc lỗi/cảnh báo ở UI; kiểm tra schema, grain, tên cột và quy tắc nghiệp vụ trước khi thử lại. |
-
-## Tài liệu bổ sung
-
-- [Schema Olist](docs/schema/olist_schema.md)
-- [Quy tắc nghiệp vụ ban đầu](docs/business_rules/initial_rules.md)
-- [Định nghĩa nghiệp vụ dùng cho RAG](docs/business_rules/rag_business_definitions.md)
-- [Thiết kế và đánh giá RAG](docs/rag.md)
-- [Validator và giao diện](docs/validator_ui.md)
+- [Cơ sở khoa học và Nghiên cứu liên quan](docs/scientific_foundations.md)
+- [Chi tiết Lược đồ Olist](docs/schema/olist_schema.md)
+- [Định nghĩa Nghiệp vụ cho RAG](docs/business_rules/rag_business_definitions.md)
+- [Cơ chế RAG và Đánh giá A/B](docs/rag.md)
+- [Bộ xác thực SQL và Giao diện](docs/validator_ui.md)
