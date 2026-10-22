@@ -23,10 +23,10 @@ ngữ cảnh RAG, benchmark và kiểm tra SQL hiển thị trước khi dựa v
 
 ```powershell
 python -m pip install -r requirements.txt
-streamlit run app.py
+python -m streamlit run app.py
 ```
 
-Giao diện có ô chat, toggle RAG, SQL candidate, trạng thái validator, cảnh báo
+Giao diện có ô chat, toggle RAG, SQL đề xuất, trạng thái validator, cảnh báo
 nghiệp vụ, bảng kết quả và biểu đồ cột khi kết quả có cấu trúc phù hợp. Chỉ tối
 đa 1.000 dòng được hiển thị để bảo vệ trình duyệt.
 
