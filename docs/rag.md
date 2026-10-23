@@ -70,7 +70,7 @@ không tự thực thi câu lệnh lên database.
 ## Đánh giá benchmark song ngữ
 
 Sau khi tạo chỉ mục, cấu hình `.env` với Gemini và xác nhận database đã được
-nạp, chạy:
+nạp, chạy tập `development` mặc định:
 
 ```powershell
 python -m src.evaluation.compare_rag
@@ -78,21 +78,28 @@ python -m src.evaluation.compare_rag
 
 Lệnh dùng chung `benchmarks/questions.json` cho cả hai phiên bản và tạo
 `benchmarks/results/rag_comparison.json`. Mỗi bài toán có một prompt tiếng
-Việt và một prompt tiếng Anh. Với 120 bài toán, lần chạy đầy đủ tạo 240 ca
-ngôn ngữ và 480 lượt sinh SQL: schema-only và RAG cho từng ca.
+Việt và một prompt tiếng Anh. Dùng `--split test` để chạy holdout, hoặc
+`--split all` để chạy toàn bộ 120 bài toán (240 ca ngôn ngữ). Chỉ các ca
+`query` được gửi qua hai phương pháp sinh SQL là `schema_only` và `rag`; các ca
+`clarify_or_refuse` không tạo lời gọi sinh SQL.
 
 Mọi SQL ứng viên phải qua Validator trước khi được thực thi bằng kết nối
 DuckDB chỉ đọc. Báo cáo so sánh kết quả thực thi với SQL tham chiếu cho các ca
 `query`, đồng thời tổng hợp `execution_accuracy`, `valid_sql_rate`, và
-`false_acceptance_rate`. Biến thể `rag_validation` tái sử dụng SQL của RAG,
-không gọi mô hình lần thứ ba.
+`false_acceptance_rate`. `rag_validation_gate` tái sử dụng SQL của RAG để hiển
+thị kết quả xác thực; nó không phải biến thể LLM độc lập và không gọi mô hình
+lần thứ ba. Nếu một kết quả vượt giới hạn so sánh, evaluator đánh dấu nó là
+`not_comparable` thay vì chấm từ dữ liệu bị cắt bớt.
 
-Các ca `clarify_or_refuse` không có `reference_sql`, không được thực thi, và
-được ghi rõ là cần đánh giá thủ công về chất lượng từ chối/yêu cầu làm rõ. Chi
-tiết hợp đồng benchmark nằm ở [benchmarks/README.md](../benchmarks/README.md).
+Các ca `clarify_or_refuse` không có `reference_sql` và không đi qua truy xuất,
+sinh SQL, xác thực hoặc thực thi. Chúng được ghi rõ là cần đánh giá thủ công về
+chất lượng từ chối/yêu cầu làm rõ. Chi tiết hợp đồng benchmark nằm ở
+[benchmarks/README.md](../benchmarks/README.md).
 
 Nên chạy một bài toán trước, ví dụ:
 
 ```powershell
 python -m src.evaluation.compare_rag --question-id Q006
 ```
+
+`--question-id` có ưu tiên cao hơn lựa chọn `--split`.

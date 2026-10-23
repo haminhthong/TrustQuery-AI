@@ -35,8 +35,8 @@ nghiệp vụ, bảng kết quả và biểu đồ cột khi kết quả có c�
 
 ## Ranh giới an toàn
 
-- Database luôn mở `read_only=True` và với DuckDB
-  `enable_external_access=false`.
+- Database luôn mở `read_only=True`, với DuckDB
+  `enable_external_access=false`, và có giới hạn bộ nhớ truy vấn.
 - Chỉ SQL được `validate_sql()` chấp thuận mới đến hàm thực thi.
 - Truy vấn bị từ chối không chạy và lỗi được hiển thị rõ trong giao diện.
 - Tệp/URL/nguồn ngoài không nằm trong phạm vi truy cập của SQL do LLM tạo.

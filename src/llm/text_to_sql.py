@@ -14,26 +14,26 @@ from __future__ import annotations
 import argparse
 import os
 import re
-import sys
 from pathlib import Path
 from typing import Any
 
 from dotenv import load_dotenv
 
-
-ROOT = Path(__file__).resolve().parents[2]
-if str(ROOT) not in sys.path:
-    sys.path.insert(0, str(ROOT))
-
 from src.console import configure_utf8_output
-from src.validation.sql_safety import UnsafeSQLError, ensure_read_only_sql
-from src.rag.build_index import EMBEDDING_MODEL
 from src.database.load_data import TABLES as OLIST_TABLES
 from src.database.read_only import connect_read_only
+from src.rag.build_index import EMBEDDING_MODEL
+from src.validation.sql_safety import UnsafeSQLError, ensure_read_only_sql
+
+
+ROOT = Path(__file__).resolve().parents[2]
 
 
 DB_PATH = ROOT / "data" / "database" / "olist.duckdb"
 ENV_PATH = ROOT / ".env"
+_SQL_FENCE = re.compile(
+    r"```(?:sql)?\s*(.*?)\s*```", flags=re.IGNORECASE | re.DOTALL
+)
 
 
 def quote_identifier(identifier: str) -> str:
@@ -116,10 +116,16 @@ Question:
 
 
 def extract_sql(response_text: str) -> str:
-    """Extract SQL from a plain response or a single fenced SQL block."""
+    """Extract plain SQL or exactly one fenced SQL block from a model response."""
     text = response_text.strip()
-    fenced = re.fullmatch(r"```(?:sql)?\s*(.*?)\s*```", text, flags=re.IGNORECASE | re.DOTALL)
-    return (fenced.group(1) if fenced else text).strip()
+    fenced_blocks = _SQL_FENCE.findall(text)
+    if len(fenced_blocks) == 1:
+        return fenced_blocks[0].strip()
+    if len(fenced_blocks) > 1:
+        raise RuntimeError(
+            "Gemini trả về nhiều khối SQL; hãy thử lại với một câu hỏi rõ ràng hơn."
+        )
+    return text
 
 
 def generate_sql(
@@ -154,6 +160,7 @@ def generate_sql(
             model=resolved_model,
             contents=build_prompt(question, schema, context),
         )
+        response_text = getattr(response, "text", None)
     except Exception:
         # SDK errors can contain transport internals.  Keep the CLI and UI
         # actionable without exposing credentials, URLs, or local details.
@@ -161,7 +168,6 @@ def generate_sql(
             "Không thể gọi Gemini API. Hãy kiểm tra API key, quyền truy cập model "
             "và kết nối mạng rồi thử lại."
         ) from None
-    response_text = getattr(response, "text", None)
     if not response_text:
         raise RuntimeError("Gemini không trả về nội dung SQL. Hãy thử lại với câu hỏi rõ hơn.")
 

@@ -44,6 +44,19 @@ def test_build_prompt_adds_retrieved_business_context_in_its_own_section() -> No
     assert prompt.index("Business context:") < prompt.index("Question:")
 
 
+def test_extract_sql_accepts_one_fenced_block_with_surrounding_prose() -> None:
+    response = "Here is the query:\n```sql\nSELECT 1 AS result\n```\n"
+
+    assert text_to_sql.extract_sql(response) == "SELECT 1 AS result"
+
+
+def test_extract_sql_rejects_ambiguous_multiple_fenced_blocks() -> None:
+    response = "```sql\nSELECT 1\n```\n```sql\nSELECT 2\n```"
+
+    with pytest.raises(RuntimeError, match="nhiều khối SQL"):
+        text_to_sql.extract_sql(response)
+
+
 def test_generate_sql_uses_resolved_environment_configuration(monkeypatch) -> None:
     """CLI calls must pass `.env` values to the Gemini SDK, not ``None``."""
     captured: dict[str, str] = {}

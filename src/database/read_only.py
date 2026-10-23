@@ -7,10 +7,15 @@ from pathlib import Path
 import duckdb
 
 
-# `read_only=True` protects the Olist database itself.  This setting closes a
+# `read_only=True` protects the Olist database itself. These settings close a
 # separate path: DuckDB table functions and extensions must not read files,
-# contact URLs, or attach other data sources on behalf of generated SQL.
-SAFE_READ_ONLY_CONFIG = {"enable_external_access": False}
+# contact URLs, or attach other data sources on behalf of generated SQL. The
+# memory ceiling also prevents an otherwise read-only generated query from
+# consuming all memory in the application process.
+SAFE_READ_ONLY_CONFIG = {
+    "enable_external_access": False,
+    "memory_limit": "512MB",
+}
 
 
 def connect_read_only(db_path: Path | str) -> duckdb.DuckDBPyConnection:

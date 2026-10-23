@@ -78,6 +78,7 @@ def test_read_only_connection_disables_external_access() -> None:
         connection.close()
 
     assert SAFE_READ_ONLY_CONFIG["enable_external_access"] is False
+    assert SAFE_READ_ONLY_CONFIG["memory_limit"] == "512MB"
     assert external_access is False
 
 
@@ -90,6 +91,16 @@ def test_unknown_column_is_rejected() -> None:
 
 def test_unknown_table_is_rejected() -> None:
     result = validate_sql("SELECT * FROM made_up_orders")
+
+    assert result.valid is False
+    assert any("Bảng không tồn tại" in error for error in result.errors)
+
+
+def test_injected_schema_cannot_expand_the_olist_table_allowlist() -> None:
+    result = validate_sql(
+        "SELECT secret FROM admin",
+        schema={"admin": {"secret"}},
+    )
 
     assert result.valid is False
     assert any("Bảng không tồn tại" in error for error in result.errors)

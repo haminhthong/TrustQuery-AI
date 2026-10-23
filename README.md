@@ -69,6 +69,7 @@ TrustQuery AI được xây dựng trên nền tảng các công trình nghiên 
           [ DuckDB Sandbox C++ Isolated ]
            • read_only = True
            • enable_external_access = False
+           • memory_limit = 512MB
                          │
                          ▼
             [ Giao diện trực quan hóa ]
@@ -76,7 +77,7 @@ TrustQuery AI được xây dựng trên nền tảng các công trình nghiên 
 
 - **Quyền hạn mô hình = 0:** Gemini không có bất kỳ kết nối nào tới cơ sở dữ liệu DuckDB. Mô hình chỉ sinh văn bản SQL ứng viên.
 - **Không tin tưởng SQL đầu ra (Zero-Trust SQL):** Mọi câu truy vấn đều phải vượt qua bộ kiểm tra AST tĩnh trước khi được chuyển đến database driver.
-- **Cách ly cấp độ C++ Engine:** DuckDB được cấu hình chặn toàn bộ truy cập hệ thống file cục bộ, network request hoặc nạp extension ngoài (`enable_external_access=false`).
+- **Cách ly cấp độ C++ Engine:** DuckDB được cấu hình chặn toàn bộ truy cập hệ thống file cục bộ, network request hoặc nạp extension ngoài (`enable_external_access=false`), đồng thời giới hạn bộ nhớ truy vấn. Giao diện chỉ tải tối đa 1.000 dòng kết quả để bảo vệ phiên làm việc.
 
 ---
 
@@ -131,8 +132,10 @@ GEMINI_API_KEY=your_gemini_api_key
 GEMINI_MODEL=gemini-3.5-flash-lite
 ```
 `app.py` nạp tệp `.env` khi khởi động. Bạn cũng có thể nhập API key trực tiếp
-trên sidebar giao diện Streamlit. Khi chưa cấu hình key, ứng dụng báo lỗi cấu
-hình thay vì dùng `reference_sql` của benchmark làm câu trả lời demo.
+trên sidebar giao diện Streamlit như một ghi đè tạm thời cho phiên hiện tại;
+khóa cấu hình sẵn không được điền lại vào ô nhập. Khi chưa cấu hình key, ứng
+dụng báo lỗi cấu hình thay vì dùng `reference_sql` của benchmark làm câu trả
+lời demo.
 
 ### 4. Dữ liệu và Chỉ mục RAG
 Cơ sở dữ liệu DuckDB (`data/database/olist.duckdb`) và chỉ mục vector ChromaDB (`data/chroma/`) đã được khởi tạo sẵn trong workspace. Nếu cần tái tạo từ đầu:
@@ -183,13 +186,20 @@ python -m src.llm.text_to_sql --use-rag "Có bao nhiêu khách hàng đã mua l�
 # Kiểm tra trước một bài toán (hai biến thể tiếng Việt/Anh)
 python -m src.evaluation.compare_rag --question-id Q006
 
-# Sau đó chạy đầy đủ: 120 bài toán, 240 ca ngôn ngữ, 480 lượt sinh SQL
+# Mặc định chỉ chạy tập development
 python -m src.evaluation.compare_rag
+
+# Chạy tập test giữ lại hoặc toàn bộ benchmark khi đã sẵn sàng
+python -m src.evaluation.compare_rag --split test
+python -m src.evaluation.compare_rag --split all
 ```
 Kết quả có `execution_accuracy`, `valid_sql_rate` và `false_acceptance_rate`
 được lưu tại `benchmarks/results/rag_comparison.json`. Xem
 [`benchmarks/README.md`](benchmarks/README.md) để biết cấu trúc bộ dữ liệu và
-quy tắc đánh giá.
+quy tắc đánh giá. Chỉ `schema_only` và `rag` là hai phương pháp LLM được so
+sánh; `rag_validation_gate` là góc nhìn xác thực trên chính ứng viên RAG, không
+phải một lượt gọi mô hình thứ ba. Các ca `clarify_or_refuse` được giữ để review
+thủ công và không tạo SQL hay được chấm bằng các chỉ số Text-to-SQL.
 
 ---
 

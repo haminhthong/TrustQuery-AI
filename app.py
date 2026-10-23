@@ -17,7 +17,9 @@ import time
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
+from uuid import uuid4
 
+import pandas as pd
 from dotenv import load_dotenv
 
 from src.database.read_only import connect_read_only
@@ -29,6 +31,12 @@ DB_PATH = ROOT / "data" / "database" / "olist.duckdb"
 BENCHMARK_PATH = ROOT / "benchmarks" / "questions.json"
 MAX_DISPLAY_ROWS = 1_000
 MAX_CHART_ROWS = 50
+DEFAULT_GEMINI_MODEL = "gemini-3.5-flash-lite"
+GEMINI_MODEL_OPTIONS = (
+    DEFAULT_GEMINI_MODEL,
+    "gemini-3.8-flash",
+    "gemini-2.5-flash",
+)
 LOGGER = logging.getLogger(__name__)
 
 _METRIC_NAME_HINTS = (
@@ -102,10 +110,12 @@ class QueryOutcome:
     execution_time_ms: float = 0.0
     explain_plan: str | None = None
     is_demo: bool = False
+    request_id: str = field(default_factory=lambda: uuid4().hex)
 
 
 _SAFE_RUNTIME_ERROR_PREFIXES = (
     "Chưa có chỉ mục",
+    "Chỉ mục thiếu metadata",
     "Chỉ mục được tạo bằng model",
     "Database không có bảng",
     "Database Olist không chứa bảng",
@@ -125,19 +135,33 @@ _GENERIC_QUERY_ERROR = (
 def _user_facing_error(error: Exception) -> str:
     """Return actionable expected errors without exposing unexpected internals."""
     message = str(error).strip()
-    if isinstance(error, (FileNotFoundError, ValueError)):
-        return message or "Dữ liệu đầu vào không hợp lệ."
+    if isinstance(error, FileNotFoundError) and message.startswith("Chưa có database"):
+        return message
     if isinstance(error, RuntimeError) and message.startswith(_SAFE_RUNTIME_ERROR_PREFIXES):
         return message
     return _GENERIC_QUERY_ERROR
 
 
+def _render_component_error(st: Any, action: str, error: Exception) -> None:
+    """Log diagnostics locally while keeping auxiliary UI errors safe."""
+    del error
+    LOGGER.exception("%s", action)
+    st.error(f"{action}. Hãy kiểm tra cấu hình cục bộ rồi thử lại.")
+
+
+def _model_options(configured_model: str | None) -> list[str]:
+    """Keep an account-specific configured model selectable without duplicates."""
+    model = configured_model.strip() if isinstance(configured_model, str) else ""
+    return list(dict.fromkeys((model or DEFAULT_GEMINI_MODEL, *GEMINI_MODEL_OPTIONS)))
+
+
 def execute_read_only_query(sql: str, db_path: Path = DB_PATH) -> tuple[Any, bool]:
     """Execute a validated query against DuckDB and cap rows shown in the UI.
 
-    The wrapping ``LIMIT`` protects the browser from unexpectedly large result
-    tables. It does not alter the generated query displayed to the user, and
-    this function is only reached after validation succeeds.
+    The wrapping ``LIMIT`` and bounded fetch protect the browser from
+    unexpectedly large result tables. They do not alter the generated query
+    displayed to the user, and this function is only reached after validation
+    succeeds.
     """
     if not db_path.is_file():
         raise FileNotFoundError(
@@ -152,13 +176,18 @@ def execute_read_only_query(sql: str, db_path: Path = DB_PATH) -> tuple[Any, boo
     )
     connection = connect_read_only(db_path)
     try:
-        dataframe = connection.execute(display_sql).fetchdf()
+        cursor = connection.execute(display_sql)
+        rows = list(cursor.fetchmany(MAX_DISPLAY_ROWS + 1))
+        columns = [
+            str(column[0]) for column in (cursor.description or []) if column
+        ]
     finally:
         connection.close()
 
-    truncated = len(dataframe.index) > MAX_DISPLAY_ROWS
+    truncated = len(rows) > MAX_DISPLAY_ROWS
     if truncated:
-        dataframe = dataframe.iloc[:MAX_DISPLAY_ROWS].copy()
+        rows = rows[:MAX_DISPLAY_ROWS]
+    dataframe = pd.DataFrame.from_records(rows, columns=columns)
     return dataframe, truncated
 
 
@@ -192,14 +221,6 @@ def answer_question(
         from src.llm.text_to_sql import generate_sql, get_schema
         from src.validation.sql_validator import validate_sql
 
-        schema = get_schema(DB_PATH)
-        context = ""
-        if use_rag:
-            from src.rag.retriever import retrieve_context
-
-            context = retrieve_context(question)
-            outcome.context = context
-
         # Reference SQL may be used only for an explicitly requested demo.
         # Evaluation and normal UI requests always call Gemini for a new query.
         candidate_sql = force_demo_sql.strip() if force_demo_sql else None
@@ -207,6 +228,14 @@ def answer_question(
             outcome.sql = candidate_sql
             outcome.is_demo = True
         else:
+            schema = get_schema(DB_PATH)
+            context = ""
+            if use_rag:
+                from src.rag.retriever import retrieve_context
+
+                context = retrieve_context(question)
+                outcome.context = context
+
             kwargs: dict[str, Any] = {
                 "question": question,
                 "schema": schema,
@@ -233,7 +262,6 @@ def answer_question(
             validation.sql, DB_PATH
         )
         outcome.explain_plan = get_execution_plan(validation.sql, DB_PATH)
-        outcome.execution_time_ms = round((time.perf_counter() - start_time) * 1000, 2)
         return outcome
     except Exception as error:  # Keep unexpected implementation details out of the UI.
         message = _user_facing_error(error)
@@ -243,8 +271,9 @@ def answer_question(
             LOGGER.info("TrustQuery request could not be completed: %s", message)
         outcome.valid = False
         outcome.errors.append(message)
-        outcome.execution_time_ms = round((time.perf_counter() - start_time) * 1000, 2)
         return outcome
+    finally:
+        outcome.execution_time_ms = round((time.perf_counter() - start_time) * 1000, 2)
 
 
 def _choose_chart_columns(dataframe: Any) -> tuple[str, str] | None:
@@ -276,8 +305,6 @@ def _render_custom_css(st: Any) -> None:
         """
         <style>
         /* Modern App Container Styling */
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
-
         html, body, [class*="css"] {
             font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
         }
@@ -381,7 +408,7 @@ def render_outcome(st: Any, outcome: QueryOutcome, *, show_context: bool) -> Non
 
     # Tabs for in-depth inspection
     tab_labels = ["📊 Kết quả & Trực quan", "📝 SQL & Kế hoạch (EXPLAIN)", "🛡️ Chi tiết Xác thực"]
-    if outcome.context or show_context:
+    if show_context and outcome.context:
         tab_labels.append("🧠 Ngữ cảnh RAG")
 
     tabs = st.tabs(tab_labels)
@@ -406,7 +433,7 @@ def render_outcome(st: Any, outcome: QueryOutcome, *, show_context: bool) -> Non
             with col3:
                 st.markdown(
                     f'<div class="tq-metric-card"><div class="tq-metric-num">{outcome.execution_time_ms} ms</div>'
-                    f'<div class="tq-metric-label">Thời gian thực thi</div></div>',
+                    f'<div class="tq-metric-label">Thời gian xử lý</div></div>',
                     unsafe_allow_html=True,
                 )
 
@@ -419,11 +446,11 @@ def render_outcome(st: Any, outcome: QueryOutcome, *, show_context: bool) -> Non
             # CSV Download
             csv_data = outcome.dataframe.to_csv(index=False).encode("utf-8")
             st.download_button(
-                label="📥 Tải xuống dữ liệu (CSV)",
+                label="📥 Tải xuống các dòng đang hiển thị (CSV)",
                 data=csv_data,
                 file_name="trustquery_result.csv",
                 mime="text/csv",
-                key=f"dl_{hash(outcome.question)}_{time.time()}",
+                key=f"download_{outcome.request_id}",
             )
 
             # Smart Charting
@@ -436,7 +463,7 @@ def render_outcome(st: Any, outcome: QueryOutcome, *, show_context: bool) -> Non
                     "Loại biểu đồ:",
                     ["Cột (Bar)", "Đường (Line)", "Miền (Area)"],
                     horizontal=True,
-                    key=f"chart_type_{hash(outcome.question)}",
+                    key=f"chart_type_{outcome.request_id}",
                 )
                 if chart_type == "Cột (Bar)":
                     st.bar_chart(chart_data)
@@ -506,8 +533,8 @@ def _render_schema_explorer(st: Any) -> None:
 
         st.markdown(f"**Xem trước 10 dòng đầu tiên của `{selected_table}`:**")
         st.dataframe(sample, use_container_width=True, hide_index=True)
-    except Exception as exc:
-        st.error(f"Không thể đọc bảng {selected_table}: {exc}")
+    except Exception as error:
+        _render_component_error(st, f"Không thể đọc bảng {selected_table}", error)
 
 
 def _render_knowledge_hub(st: Any) -> None:
@@ -540,8 +567,8 @@ def _render_knowledge_hub(st: Any) -> None:
                     distance_str = f"(Độ lệch khoảng cách: {chunk.distance:.4f})" if chunk.distance is not None else ""
                     with st.expander(f"Top {idx}: {chunk.source} — {chunk.section} {distance_str}", expanded=(idx == 1)):
                         st.markdown(chunk.text)
-        except Exception as exc:
-            st.error(f"Lỗi truy xuất RAG: {exc}")
+        except Exception as error:
+            _render_component_error(st, "Không thể truy xuất quy tắc RAG", error)
 
 
 def _render_benchmark_hub(st: Any) -> None:
@@ -577,8 +604,8 @@ def _render_benchmark_hub(st: Any) -> None:
                         )
                         if note := q.get("evaluation_note"):
                             st.caption(str(note))
-        except Exception as exc:
-            st.error(f"Không đọc được benchmark: {exc}")
+        except Exception as error:
+            _render_component_error(st, "Không thể đọc benchmark", error)
     else:
         st.warning("Không tìm thấy tệp benchmarks/questions.json.")
 
@@ -605,32 +632,48 @@ def main() -> None:
     with st.sidebar:
         st.markdown("### ⚙️ Cấu hình Hệ thống")
 
-        # API Key & Model Configuration
+        # Credentials entered here remain in this browser session only. Server
+        # configuration from .env is never copied into a widget or overwritten.
         api_key_input = st.text_input(
-            "Gemini API Key:",
-            value=st.session_state.get("gemini_api_key", os.getenv("GEMINI_API_KEY", "")),
+            "Gemini API Key (tùy chọn cho phiên này):",
+            key="gemini_api_key_override",
             type="password",
-            help="Điền API key Google AI nếu chưa lưu trong file .env.",
+            placeholder="Chỉ nhập khi muốn ghi đè cấu hình máy chủ",
+            help="Để trống để dùng GEMINI_API_KEY từ .env của máy chủ, nếu có.",
         )
-        if api_key_input:
-            st.session_state.gemini_api_key = api_key_input
-            os.environ["GEMINI_API_KEY"] = api_key_input
+        session_api_key = api_key_input.strip()
+        if session_api_key:
+            st.caption("Khóa riêng của phiên này đang được sử dụng.")
+        elif os.getenv("GEMINI_API_KEY", "").strip():
+            st.caption("✓ Đã có khóa Gemini trong cấu hình máy chủ.")
+        else:
+            st.warning("Chưa có Gemini API key. Hãy cấu hình .env hoặc nhập khóa cho phiên này.")
 
-        model_options = [
-            "gemini-3.5-flash-lite",
-            "gemini-3.8-flash",
-            "gemini-2.5-flash",
-        ]
-        current_model = os.getenv("GEMINI_MODEL", "gemini-3.5-flash-lite")
-        model_idx = model_options.index(current_model) if current_model in model_options else 0
-        selected_model = st.selectbox("Mô hình AI:", model_options, index=model_idx)
-        st.session_state.gemini_model = selected_model
-        os.environ["GEMINI_MODEL"] = selected_model
+        configured_model = os.getenv("GEMINI_MODEL", DEFAULT_GEMINI_MODEL).strip()
+        configured_model = configured_model or DEFAULT_GEMINI_MODEL
+        model_options = _model_options(configured_model)
+        if st.session_state.get("gemini_model") not in model_options:
+            st.session_state.gemini_model = model_options[0]
+        selected_model = st.selectbox(
+            "Mô hình AI:",
+            model_options,
+            index=model_options.index(configured_model)
+            if configured_model in model_options
+            else 0,
+            key="gemini_model",
+        )
 
         st.markdown("---")
         st.markdown("### 🛡️ Ranh giới An toàn")
-        use_rag = st.toggle("Dùng quy tắc nghiệp vụ RAG", value=True, help="Bổ sung tri thức nghiệp vụ Olist vào prompt.")
-        show_context = st.checkbox("Hiển thị đoạn trích RAG", value=True)
+        use_rag = st.toggle(
+            "Dùng quy tắc nghiệp vụ RAG",
+            value=True,
+            key="use_rag",
+            help="Bổ sung tri thức nghiệp vụ Olist vào prompt.",
+        )
+        show_context = st.checkbox(
+            "Hiển thị đoạn trích RAG", value=True, key="show_rag_context"
+        )
 
         st.caption("🔒 DuckDB Sandbox: `read_only=True` & `external_access=false`")
         st.caption("🛡️ AST Validation: SQLGlot kiểm tra SELECT / CTE duy nhất")
@@ -708,8 +751,8 @@ def main() -> None:
                         outcome = answer_question(
                             cleaned_question,
                             use_rag=use_rag,
-                            api_key=st.session_state.get("gemini_api_key"),
-                            model=st.session_state.get("gemini_model"),
+                            api_key=session_api_key or None,
+                            model=selected_model,
                         )
                     render_outcome(st, outcome, show_context=show_context)
                 st.session_state.messages.append({"role": "assistant", "outcome": outcome})

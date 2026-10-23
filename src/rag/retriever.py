@@ -63,7 +63,11 @@ def get_rule_collection(
     collection = client.get_collection(name=collection_name)
     metadata = getattr(collection, "metadata", None) or {}
     indexed_model = metadata.get("embedding_model")
-    if indexed_model and indexed_model != model_name:
+    if not isinstance(indexed_model, str) or not indexed_model.strip():
+        raise IndexModelMismatchError(
+            "Chỉ mục thiếu metadata embedding_model. Hãy lập lại chỉ mục trước khi truy xuất."
+        )
+    if indexed_model != model_name:
         raise IndexModelMismatchError(
             "Chỉ mục được tạo bằng model embedding "
             f"'{indexed_model}', nhưng truy xuất đang dùng '{model_name}'. "

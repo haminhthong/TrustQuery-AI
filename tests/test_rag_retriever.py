@@ -58,3 +58,19 @@ def test_get_rule_collection_rejects_a_different_embedding_model() -> None:
 
     with pytest.raises(IndexModelMismatchError, match="indexed-model"):
         get_rule_collection(Client(), "rules", model_name="query-model")
+
+
+def test_get_rule_collection_rejects_index_without_embedding_metadata() -> None:
+    class Collection:
+        metadata = {}
+
+    class Client:
+        def list_collections(self) -> list[str]:
+            return ["rules"]
+
+        def get_collection(self, *, name: str) -> Collection:
+            assert name == "rules"
+            return Collection()
+
+    with pytest.raises(IndexModelMismatchError, match="embedding_model"):
+        get_rule_collection(Client(), "rules")

@@ -96,12 +96,17 @@ def load_allowed_schema(db_path: Path = DB_PATH) -> dict[str, set[str]]:
         connection.close()
 
 
-def _normalise_schema(schema: Mapping[str, set[str] | list[str] | tuple[str, ...]]) -> dict[str, set[str]]:
-    """Accept an injectable schema while keeping matching case-insensitive."""
-    return {
-        str(table).lower(): {str(column).lower() for column in columns}
-        for table, columns in schema.items()
-    }
+def _normalise_schema(
+    schema: Mapping[str, set[str] | list[str] | tuple[str, ...]],
+) -> dict[str, set[str]]:
+    """Normalize an injected test schema without widening the table allowlist."""
+    normalized: dict[str, set[str]] = {}
+    for table, columns in schema.items():
+        table_name = str(table).lower()
+        if table_name not in ALLOWED_TABLES:
+            continue
+        normalized[table_name] = {str(column).lower() for column in columns}
+    return normalized
 
 
 def _load_sqlglot() -> tuple[Any, Any, type[Exception]]:
@@ -372,7 +377,9 @@ def validate_sql(
 ) -> ValidationResult:
     """Validate one candidate DuckDB query without executing it.
 
-    The result never raises for an invalid LLM response.  Callers must execute
+    The result never raises for an invalid LLM response.  ``schema`` exists to
+    support isolated tests, but can only narrow the physical Olist table
+    allowlist; it can never authorize additional tables. Callers must execute
     only ``result.sql`` when ``result.valid`` is true, and still use a
     read-only DuckDB connection for the actual query.
     """

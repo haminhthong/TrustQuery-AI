@@ -1,8 +1,9 @@
 # Benchmark TrustQuery AI
 
 `questions.json` chứa 120 bài toán nghiệp vụ độc lập cho đánh giá Text-to-SQL.
-Mỗi bài toán có `question_vi` và `question_en`; công cụ đánh giá chạy chúng như
-hai ca riêng biệt, vì vậy một lần đánh giá đầy đủ có 240 ca ngôn ngữ.
+Mỗi bài toán có `question_vi` và `question_en`; công cụ đánh giá mở rộng chúng
+thành hai ca riêng biệt. Lệnh mặc định chỉ chạy tập `development`; dùng
+`--split all` để chạy toàn bộ 240 ca ngôn ngữ.
 
 ## Phân bổ
 
@@ -28,7 +29,8 @@ và 90 bài `test` giữ lại cho báo cáo cuối. Không đưa SQL tham chi�
 - Các ca `query` có `reference_sql` đã được Validator và DuckDB read-only xác
   nhận. Đây chỉ là chuẩn đánh giá, không được dùng làm câu trả lời demo.
 - Các ca `clarify_or_refuse` không có `reference_sql`; `evaluation_note` mô tả
-  thông tin cần thiếu hoặc lý do phải từ chối. Chúng cần chấm thủ công.
+  thông tin cần thiếu hoặc lý do phải từ chối. Chúng cần chấm thủ công và không
+  kích hoạt truy xuất RAG, sinh SQL, xác thực SQL hoặc thực thi database.
 
 ## Chạy và đọc kết quả
 
@@ -36,15 +38,24 @@ và 90 bài `test` giữ lại cho báo cáo cuối. Không đưa SQL tham chi�
 # Luôn kiểm tra một bài toán trước (tạo 2 ca: vi/en)
 python -m src.evaluation.compare_rag --question-id Q006
 
-# Chạy toàn bộ 120 bài toán khi API, RAG và chi phí đã sẵn sàng
+# Mặc định: chạy 30 bài thuộc tập development
 python -m src.evaluation.compare_rag
+
+# Chạy 90 bài test giữ lại hoặc toàn bộ 120 bài khi API, RAG và chi phí đã sẵn sàng
+python -m src.evaluation.compare_rag --split test
+python -m src.evaluation.compare_rag --split all
 ```
 
+`--question-id` có ưu tiên cao hơn `--split`, nên có thể chạy lại một bài test
+cụ thể mà không cần đổi split.
+
 Trình đánh giá tạo hai SQL ứng viên cho mỗi ca: `schema_only` và `rag`.
-`rag_validation` dùng đúng SQL ứng viên của `rag`, rồi biểu diễn kết quả sau
-Validator; nó không tạo một lượt gọi mô hình thứ ba. SQL chỉ được thực thi khi
-đã vượt qua Validator và luôn chạy qua DuckDB read-only, external access bị
-tắt.
+`rag_validation_gate` dùng đúng SQL ứng viên của `rag`, rồi biểu diễn trạng
+thái sau Validator; đây là một view xác thực, không phải phương pháp LLM độc
+lập và không tạo lượt gọi mô hình thứ ba. SQL chỉ được thực thi khi đã vượt qua
+Validator và luôn chạy qua DuckDB read-only, external access bị tắt. Kết quả
+vượt quá giới hạn so sánh được báo là `not_comparable`, thay vì chỉ so sánh một
+phần kết quả.
 
 Với các ca `query`, báo cáo gồm:
 
@@ -54,5 +65,6 @@ Với các ca `query`, báo cáo gồm:
 - `false_acceptance_rate`: SQL được chấp thuận nhưng cho kết quả khác chuẩn /
   toàn bộ ca `query`.
 
-Các ca `clarify_or_refuse` được để riêng khỏi các tỷ lệ này và yêu cầu người
-đánh giá xác nhận mô hình đã từ chối hoặc hỏi lại một cách phù hợp.
+Các ca `clarify_or_refuse` được để riêng khỏi các tỷ lệ này. Báo cáo chỉ đánh
+dấu chúng cần review thủ công; cần một bộ đánh giá hội thoại/từ chối riêng để
+xác nhận mô hình đã từ chối hoặc hỏi lại một cách phù hợp.
