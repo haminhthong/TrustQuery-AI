@@ -4,6 +4,9 @@
     "question_vi": "Tổng số đơn hàng là bao nhiêu?",
     "question_en": "How many orders are there?",
     "difficulty": "easy",
+    "category": "basic_sql",
+    "split": "development",
+    "expected_outcome": "query",
     "reference_sql": "SELECT COUNT(*) AS total_orders FROM orders"
   },
   {
@@ -11,6 +14,9 @@
     "question_vi": "Có bao nhiêu đơn đã được giao?",
     "question_en": "How many orders have been delivered?",
     "difficulty": "easy",
+    "category": "basic_sql",
+    "split": "development",
+    "expected_outcome": "query",
     "reference_sql": "SELECT COUNT(*) AS delivered_orders FROM orders WHERE order_status = 'delivered'"
   },
   {
@@ -18,6 +24,9 @@
     "question_vi": "Những năm nào có đơn hàng?",
     "question_en": "Which years have orders?",
     "difficulty": "easy",
+    "category": "filters_time",
+    "split": "development",
+    "expected_outcome": "query",
     "reference_sql": "SELECT YEAR(order_purchase_timestamp) AS year, COUNT(*) AS total_orders FROM orders GROUP BY YEAR(order_purchase_timestamp) ORDER BY year"
   },
   {
@@ -25,6 +34,9 @@
     "question_vi": "Top 5 danh mục có nhiều sản phẩm được bán nhất?",
     "question_en": "What are the top 5 product categories by number of items sold?",
     "difficulty": "medium",
+    "category": "joins",
+    "split": "development",
+    "expected_outcome": "query",
     "reference_sql": "SELECT p.product_category_name AS category, COUNT(*) AS items_sold FROM order_items oi JOIN products p ON oi.product_id = p.product_id GROUP BY p.product_category_name ORDER BY items_sold DESC LIMIT 5"
   },
   {
@@ -32,6 +44,9 @@
     "question_vi": "Giá trị thanh toán của các đơn đã giao theo năm?",
     "question_en": "What is the total payment value of delivered orders by purchase year?",
     "difficulty": "medium",
+    "category": "aggregation",
+    "split": "development",
+    "expected_outcome": "query",
     "reference_sql": "SELECT YEAR(o.order_purchase_timestamp) AS year, SUM(op.payment_value) AS total_payment FROM orders o JOIN order_payments op ON o.order_id = op.order_id WHERE o.order_status = 'delivered' GROUP BY YEAR(o.order_purchase_timestamp) ORDER BY year"
   },
   {
@@ -39,6 +54,9 @@
     "question_vi": "Có bao nhiêu khách hàng đã mua lại?",
     "question_en": "How many customers made more than one purchase?",
     "difficulty": "medium",
+    "category": "complex_business",
+    "split": "development",
+    "expected_outcome": "query",
     "reference_sql": "SELECT COUNT(*) AS repeat_customers FROM (SELECT c.customer_unique_id FROM orders o JOIN customers c ON o.customer_id = c.customer_id GROUP BY c.customer_unique_id HAVING COUNT(DISTINCT o.order_id) > 1) AS repeat_customer_ids"
   },
   {
@@ -46,6 +64,9 @@
     "question_vi": "Có bao nhiêu khách hàng duy nhất đã mua hàng?",
     "question_en": "How many unique customers have purchased?",
     "difficulty": "medium",
+    "category": "joins",
+    "split": "development",
+    "expected_outcome": "query",
     "reference_sql": "SELECT COUNT(DISTINCT c.customer_unique_id) AS unique_customers FROM orders o JOIN customers c ON o.customer_id = c.customer_id"
   },
   {
@@ -53,6 +74,1129 @@
     "question_vi": "Có bao nhiêu đơn hàng được giao trễ?",
     "question_en": "How many orders were delivered late?",
     "difficulty": "medium",
+    "category": "complex_business",
+    "split": "development",
+    "expected_outcome": "query",
     "reference_sql": "SELECT COUNT(DISTINCT order_id) AS late_deliveries FROM orders WHERE order_status = 'delivered' AND order_delivered_customer_date IS NOT NULL AND order_estimated_delivery_date IS NOT NULL AND order_delivered_customer_date > order_estimated_delivery_date"
+  },
+  {
+    "id": "Q009",
+    "question_vi": "Có bao nhiêu bản ghi khách hàng?",
+    "question_en": "How many customer records are there?",
+    "difficulty": "easy",
+    "category": "basic_sql",
+    "split": "development",
+    "expected_outcome": "query",
+    "reference_sql": "SELECT COUNT(*) AS total_customer_records FROM customers"
+  },
+  {
+    "id": "Q010",
+    "question_vi": "Có bao nhiêu sản phẩm trong dữ liệu?",
+    "question_en": "How many products are in the data?",
+    "difficulty": "easy",
+    "category": "basic_sql",
+    "split": "development",
+    "expected_outcome": "query",
+    "reference_sql": "SELECT COUNT(*) AS total_products FROM products"
+  },
+  {
+    "id": "Q011",
+    "question_vi": "Có bao nhiêu người bán trong dữ liệu?",
+    "question_en": "How many sellers are in the data?",
+    "difficulty": "easy",
+    "category": "basic_sql",
+    "split": "development",
+    "expected_outcome": "query",
+    "reference_sql": "SELECT COUNT(*) AS total_sellers FROM sellers"
+  },
+  {
+    "id": "Q012",
+    "question_vi": "Hiển thị 10 đơn hàng đặt sớm nhất.",
+    "question_en": "Show the first 10 orders by purchase time.",
+    "difficulty": "easy",
+    "category": "basic_sql",
+    "split": "test",
+    "expected_outcome": "query",
+    "reference_sql": "SELECT order_id, customer_id, order_status, order_purchase_timestamp FROM orders ORDER BY order_purchase_timestamp LIMIT 10"
+  },
+  {
+    "id": "Q013",
+    "question_vi": "Liệt kê 10 danh mục sản phẩm không rỗng theo thứ tự chữ cái.",
+    "question_en": "List 10 non-null product categories alphabetically.",
+    "difficulty": "easy",
+    "category": "basic_sql",
+    "split": "test",
+    "expected_outcome": "query",
+    "reference_sql": "SELECT DISTINCT product_category_name FROM products WHERE product_category_name IS NOT NULL ORDER BY product_category_name LIMIT 10"
+  },
+  {
+    "id": "Q014",
+    "question_vi": "Có bao nhiêu dòng hàng trong các đơn?",
+    "question_en": "How many order-item rows are there?",
+    "difficulty": "easy",
+    "category": "basic_sql",
+    "split": "test",
+    "expected_outcome": "query",
+    "reference_sql": "SELECT COUNT(*) AS total_order_items FROM order_items"
+  },
+  {
+    "id": "Q015",
+    "question_vi": "Có bao nhiêu bản ghi thanh toán?",
+    "question_en": "How many payment records are there?",
+    "difficulty": "easy",
+    "category": "basic_sql",
+    "split": "test",
+    "expected_outcome": "query",
+    "reference_sql": "SELECT COUNT(*) AS total_payment_records FROM order_payments"
+  },
+  {
+    "id": "Q016",
+    "question_vi": "Có bao nhiêu bản ghi đánh giá?",
+    "question_en": "How many review records are there?",
+    "difficulty": "easy",
+    "category": "basic_sql",
+    "split": "test",
+    "expected_outcome": "query",
+    "reference_sql": "SELECT COUNT(*) AS total_reviews FROM order_reviews"
+  },
+  {
+    "id": "Q017",
+    "question_vi": "Có bao nhiêu đơn chưa có thời điểm phê duyệt?",
+    "question_en": "How many orders have no approval timestamp?",
+    "difficulty": "easy",
+    "category": "basic_sql",
+    "split": "test",
+    "expected_outcome": "query",
+    "reference_sql": "SELECT COUNT(*) AS orders_without_approval FROM orders WHERE order_approved_at IS NULL"
+  },
+  {
+    "id": "Q018",
+    "question_vi": "Có bao nhiêu sản phẩm chưa có danh mục?",
+    "question_en": "How many products have no category?",
+    "difficulty": "easy",
+    "category": "basic_sql",
+    "split": "test",
+    "expected_outcome": "query",
+    "reference_sql": "SELECT COUNT(*) AS products_without_category FROM products WHERE product_category_name IS NULL"
+  },
+  {
+    "id": "Q019",
+    "question_vi": "Có bao nhiêu ánh xạ dịch danh mục?",
+    "question_en": "How many category translation mappings are there?",
+    "difficulty": "easy",
+    "category": "basic_sql",
+    "split": "test",
+    "expected_outcome": "query",
+    "reference_sql": "SELECT COUNT(*) AS total_category_translations FROM category_translation"
+  },
+  {
+    "id": "Q020",
+    "question_vi": "Những bang nào xuất hiện trong bảng khách hàng?",
+    "question_en": "Which states appear in the customers table?",
+    "difficulty": "easy",
+    "category": "basic_sql",
+    "split": "test",
+    "expected_outcome": "query",
+    "reference_sql": "SELECT DISTINCT customer_state FROM customers ORDER BY customer_state"
+  },
+  {
+    "id": "Q021",
+    "question_vi": "Những trạng thái đơn hàng nào có trong dữ liệu?",
+    "question_en": "Which order statuses occur in the data?",
+    "difficulty": "easy",
+    "category": "basic_sql",
+    "split": "test",
+    "expected_outcome": "query",
+    "reference_sql": "SELECT DISTINCT order_status FROM orders ORDER BY order_status"
+  },
+  {
+    "id": "Q022",
+    "question_vi": "Hiển thị 10 người bán đầu tiên cùng thành phố và bang.",
+    "question_en": "Show the first 10 sellers with their city and state.",
+    "difficulty": "easy",
+    "category": "basic_sql",
+    "split": "test",
+    "expected_outcome": "query",
+    "reference_sql": "SELECT seller_id, seller_city, seller_state FROM sellers ORDER BY seller_id LIMIT 10"
+  },
+  {
+    "id": "Q023",
+    "question_vi": "Có bao nhiêu bản ghi vị trí địa lý?",
+    "question_en": "How many geolocation records are there?",
+    "difficulty": "easy",
+    "category": "basic_sql",
+    "split": "test",
+    "expected_outcome": "query",
+    "reference_sql": "SELECT COUNT(*) AS total_geolocation_records FROM geolocation"
+  },
+  {
+    "id": "Q024",
+    "question_vi": "Có bao nhiêu sản phẩm có dữ liệu số lượng ảnh?",
+    "question_en": "How many products have a photo-count value?",
+    "difficulty": "easy",
+    "category": "basic_sql",
+    "split": "test",
+    "expected_outcome": "query",
+    "reference_sql": "SELECT COUNT(*) AS products_with_photo_count FROM products WHERE product_photos_qty IS NOT NULL"
+  },
+  {
+    "id": "Q025",
+    "question_vi": "Những phương thức thanh toán nào xuất hiện trong dữ liệu?",
+    "question_en": "Which payment types occur in the data?",
+    "difficulty": "easy",
+    "category": "basic_sql",
+    "split": "test",
+    "expected_outcome": "query",
+    "reference_sql": "SELECT DISTINCT payment_type FROM order_payments ORDER BY payment_type"
+  },
+  {
+    "id": "Q026",
+    "question_vi": "Hiển thị 10 sản phẩm đầu tiên với danh mục và khối lượng.",
+    "question_en": "Show the first 10 products with category and weight.",
+    "difficulty": "easy",
+    "category": "basic_sql",
+    "split": "test",
+    "expected_outcome": "query",
+    "reference_sql": "SELECT product_id, product_category_name, product_weight_g FROM products ORDER BY product_id LIMIT 10"
+  },
+  {
+    "id": "Q027",
+    "question_vi": "Có bao nhiêu đơn được đặt trong năm 2017?",
+    "question_en": "How many orders were placed in 2017?",
+    "difficulty": "easy",
+    "category": "filters_time",
+    "split": "development",
+    "expected_outcome": "query",
+    "reference_sql": "SELECT COUNT(*) AS orders_2017 FROM orders WHERE order_purchase_timestamp >= '2017-01-01' AND order_purchase_timestamp < '2018-01-01'"
+  },
+  {
+    "id": "Q028",
+    "question_vi": "Có bao nhiêu đơn đã giao được đặt trong năm 2018?",
+    "question_en": "How many delivered orders were placed in 2018?",
+    "difficulty": "medium",
+    "category": "filters_time",
+    "split": "development",
+    "expected_outcome": "query",
+    "reference_sql": "SELECT COUNT(*) AS delivered_orders_2018 FROM orders WHERE order_status = 'delivered' AND order_purchase_timestamp >= '2018-01-01' AND order_purchase_timestamp < '2019-01-01'"
+  },
+  {
+    "id": "Q029",
+    "question_vi": "Có bao nhiêu đơn bị hủy được đặt trong năm 2018?",
+    "question_en": "How many canceled orders were placed in 2018?",
+    "difficulty": "medium",
+    "category": "filters_time",
+    "split": "development",
+    "expected_outcome": "query",
+    "reference_sql": "SELECT COUNT(*) AS canceled_orders_2018 FROM orders WHERE order_status = 'canceled' AND order_purchase_timestamp >= '2018-01-01' AND order_purchase_timestamp < '2019-01-01'"
+  },
+  {
+    "id": "Q030",
+    "question_vi": "Có bao nhiêu đơn được đặt trong tháng 1 năm 2018?",
+    "question_en": "How many orders were placed in January 2018?",
+    "difficulty": "easy",
+    "category": "filters_time",
+    "split": "development",
+    "expected_outcome": "query",
+    "reference_sql": "SELECT COUNT(*) AS orders_january_2018 FROM orders WHERE order_purchase_timestamp >= '2018-01-01' AND order_purchase_timestamp < '2018-02-01'"
+  },
+  {
+    "id": "Q031",
+    "question_vi": "Có bao nhiêu đơn được đặt trong năm 2016?",
+    "question_en": "How many orders were placed in 2016?",
+    "difficulty": "easy",
+    "category": "filters_time",
+    "split": "test",
+    "expected_outcome": "query",
+    "reference_sql": "SELECT COUNT(*) AS orders_2016 FROM orders WHERE order_purchase_timestamp >= '2016-01-01' AND order_purchase_timestamp < '2017-01-01'"
+  },
+  {
+    "id": "Q032",
+    "question_vi": "Có bao nhiêu đơn được đặt trong tháng 12 năm 2017?",
+    "question_en": "How many orders were placed in December 2017?",
+    "difficulty": "easy",
+    "category": "filters_time",
+    "split": "test",
+    "expected_outcome": "query",
+    "reference_sql": "SELECT COUNT(*) AS orders_december_2017 FROM orders WHERE order_purchase_timestamp >= '2017-12-01' AND order_purchase_timestamp < '2018-01-01'"
+  },
+  {
+    "id": "Q033",
+    "question_vi": "Có bao nhiêu đơn được đặt trong tháng 3 năm 2018?",
+    "question_en": "How many orders were placed in March 2018?",
+    "difficulty": "easy",
+    "category": "filters_time",
+    "split": "test",
+    "expected_outcome": "query",
+    "reference_sql": "SELECT COUNT(*) AS orders_march_2018 FROM orders WHERE order_purchase_timestamp >= '2018-03-01' AND order_purchase_timestamp < '2018-04-01'"
+  },
+  {
+    "id": "Q034",
+    "question_vi": "Có bao nhiêu đơn được đặt trước năm 2017?",
+    "question_en": "How many orders were placed before 2017?",
+    "difficulty": "easy",
+    "category": "filters_time",
+    "split": "test",
+    "expected_outcome": "query",
+    "reference_sql": "SELECT COUNT(*) AS orders_before_2017 FROM orders WHERE order_purchase_timestamp < '2017-01-01'"
+  },
+  {
+    "id": "Q035",
+    "question_vi": "Có bao nhiêu đơn được đặt trong quý I năm 2018?",
+    "question_en": "How many orders were placed in the first quarter of 2018?",
+    "difficulty": "medium",
+    "category": "filters_time",
+    "split": "test",
+    "expected_outcome": "query",
+    "reference_sql": "SELECT COUNT(*) AS orders_q1_2018 FROM orders WHERE order_purchase_timestamp >= '2018-01-01' AND order_purchase_timestamp < '2018-04-01'"
+  },
+  {
+    "id": "Q036",
+    "question_vi": "Có bao nhiêu đơn đã giao được phê duyệt trong năm 2018?",
+    "question_en": "How many delivered orders were approved in 2018?",
+    "difficulty": "medium",
+    "category": "filters_time",
+    "split": "test",
+    "expected_outcome": "query",
+    "reference_sql": "SELECT COUNT(*) AS delivered_orders_approved_2018 FROM orders WHERE order_status = 'delivered' AND order_approved_at >= '2018-01-01' AND order_approved_at < '2019-01-01'"
+  },
+  {
+    "id": "Q037",
+    "question_vi": "Có bao nhiêu đơn đã giao đến khách hàng trong năm 2018?",
+    "question_en": "How many orders were delivered to customers in 2018?",
+    "difficulty": "medium",
+    "category": "filters_time",
+    "split": "test",
+    "expected_outcome": "query",
+    "reference_sql": "SELECT COUNT(*) AS customer_deliveries_2018 FROM orders WHERE order_status = 'delivered' AND order_delivered_customer_date >= '2018-01-01' AND order_delivered_customer_date < '2019-01-01'"
+  },
+  {
+    "id": "Q038",
+    "question_vi": "Có bao nhiêu đơn có ngày giao dự kiến trong tháng 3 năm 2018?",
+    "question_en": "How many orders had an estimated delivery date in March 2018?",
+    "difficulty": "medium",
+    "category": "filters_time",
+    "split": "test",
+    "expected_outcome": "query",
+    "reference_sql": "SELECT COUNT(*) AS orders_estimated_march_2018 FROM orders WHERE order_estimated_delivery_date >= '2018-03-01' AND order_estimated_delivery_date < '2018-04-01'"
+  },
+  {
+    "id": "Q039",
+    "question_vi": "Có bao nhiêu đơn được đặt trong tháng 8 năm 2018?",
+    "question_en": "How many orders were placed in August 2018?",
+    "difficulty": "easy",
+    "category": "filters_time",
+    "split": "test",
+    "expected_outcome": "query",
+    "reference_sql": "SELECT COUNT(*) AS orders_august_2018 FROM orders WHERE order_purchase_timestamp >= '2018-08-01' AND order_purchase_timestamp < '2018-09-01'"
+  },
+  {
+    "id": "Q040",
+    "question_vi": "Có bao nhiêu đơn được đặt vào ngày 1 tháng 1 năm 2018?",
+    "question_en": "How many orders were placed on January 1, 2018?",
+    "difficulty": "easy",
+    "category": "filters_time",
+    "split": "test",
+    "expected_outcome": "query",
+    "reference_sql": "SELECT COUNT(*) AS orders_on_2018_01_01 FROM orders WHERE order_purchase_timestamp >= '2018-01-01' AND order_purchase_timestamp < '2018-01-02'"
+  },
+  {
+    "id": "Q041",
+    "question_vi": "Có bao nhiêu đơn chưa được phê duyệt?",
+    "question_en": "How many orders have not been approved?",
+    "difficulty": "easy",
+    "category": "filters_time",
+    "split": "test",
+    "expected_outcome": "query",
+    "reference_sql": "SELECT COUNT(*) AS unapproved_orders FROM orders WHERE order_approved_at IS NULL"
+  },
+  {
+    "id": "Q042",
+    "question_vi": "Có bao nhiêu đơn giao trễ được đặt trong năm 2018?",
+    "question_en": "How many late-delivered orders were placed in 2018?",
+    "difficulty": "hard",
+    "category": "filters_time",
+    "split": "test",
+    "expected_outcome": "query",
+    "reference_sql": "SELECT COUNT(*) AS late_deliveries_2018 FROM orders WHERE order_status = 'delivered' AND order_purchase_timestamp >= '2018-01-01' AND order_purchase_timestamp < '2019-01-01' AND order_delivered_customer_date IS NOT NULL AND order_estimated_delivery_date IS NOT NULL AND order_delivered_customer_date > order_estimated_delivery_date"
+  },
+  {
+    "id": "Q043",
+    "question_vi": "Có bao nhiêu đơn có thời điểm phê duyệt sớm hơn thời điểm đặt?",
+    "question_en": "How many orders have an approval timestamp earlier than the purchase timestamp?",
+    "difficulty": "medium",
+    "category": "filters_time",
+    "split": "test",
+    "expected_outcome": "query",
+    "reference_sql": "SELECT COUNT(*) AS approval_before_purchase_orders FROM orders WHERE order_approved_at IS NOT NULL AND order_approved_at < order_purchase_timestamp"
+  },
+  {
+    "id": "Q044",
+    "question_vi": "Có bao nhiêu đơn đã giao đến khách trong vòng 7 ngày kể từ khi đặt?",
+    "question_en": "How many delivered orders reached the customer within 7 days of purchase?",
+    "difficulty": "hard",
+    "category": "filters_time",
+    "split": "test",
+    "expected_outcome": "query",
+    "reference_sql": "SELECT COUNT(*) AS deliveries_within_7_days FROM orders WHERE order_status = 'delivered' AND order_delivered_customer_date IS NOT NULL AND order_delivered_customer_date <= order_purchase_timestamp + INTERVAL 7 DAY"
+  },
+  {
+    "id": "Q045",
+    "question_vi": "Hiển thị 10 đơn đã giao đầu tiên sau ngày 1 tháng 10 năm 2018.",
+    "question_en": "Show the first 10 delivered orders after October 1, 2018.",
+    "difficulty": "medium",
+    "category": "filters_time",
+    "split": "test",
+    "expected_outcome": "query",
+    "reference_sql": "SELECT order_id, order_purchase_timestamp, order_delivered_customer_date FROM orders WHERE order_status = 'delivered' AND order_delivered_customer_date >= '2018-10-01' ORDER BY order_delivered_customer_date LIMIT 10"
+  },
+  {
+    "id": "Q046",
+    "question_vi": "Hiển thị 10 đơn hàng cùng thành phố và bang của khách hàng.",
+    "question_en": "Show 10 orders with the customer's city and state.",
+    "difficulty": "medium",
+    "category": "joins",
+    "split": "development",
+    "expected_outcome": "query",
+    "reference_sql": "SELECT o.order_id, c.customer_city, c.customer_state FROM orders o JOIN customers c ON o.customer_id = c.customer_id ORDER BY o.order_purchase_timestamp LIMIT 10"
+  },
+  {
+    "id": "Q047",
+    "question_vi": "Đếm số đơn hàng theo bang của khách hàng.",
+    "question_en": "Count orders by customer state.",
+    "difficulty": "medium",
+    "category": "joins",
+    "split": "development",
+    "expected_outcome": "query",
+    "reference_sql": "SELECT c.customer_state AS customer_state, COUNT(DISTINCT o.order_id) AS total_orders FROM orders o JOIN customers c ON o.customer_id = c.customer_id GROUP BY c.customer_state ORDER BY total_orders DESC"
+  },
+  {
+    "id": "Q048",
+    "question_vi": "Hiển thị 10 dòng hàng cùng danh mục sản phẩm.",
+    "question_en": "Show 10 order-item rows with their product category.",
+    "difficulty": "medium",
+    "category": "joins",
+    "split": "development",
+    "expected_outcome": "query",
+    "reference_sql": "SELECT oi.order_id, oi.order_item_id, p.product_category_name FROM order_items oi JOIN products p ON oi.product_id = p.product_id ORDER BY oi.order_id, oi.order_item_id LIMIT 10"
+  },
+  {
+    "id": "Q049",
+    "question_vi": "Top 5 bang của người bán theo số dòng hàng đã bán là gì?",
+    "question_en": "What are the top 5 seller states by number of order-item rows sold?",
+    "difficulty": "medium",
+    "category": "joins",
+    "split": "test",
+    "expected_outcome": "query",
+    "reference_sql": "SELECT s.seller_state AS seller_state, COUNT(*) AS items_sold FROM order_items oi JOIN sellers s ON oi.seller_id = s.seller_id GROUP BY s.seller_state ORDER BY items_sold DESC LIMIT 5"
+  },
+  {
+    "id": "Q050",
+    "question_vi": "Có bao nhiêu đơn hàng có ít nhất một đánh giá?",
+    "question_en": "How many orders have at least one review?",
+    "difficulty": "medium",
+    "category": "joins",
+    "split": "test",
+    "expected_outcome": "query",
+    "reference_sql": "SELECT COUNT(DISTINCT o.order_id) AS orders_with_reviews FROM orders o JOIN order_reviews r ON o.order_id = r.order_id"
+  },
+  {
+    "id": "Q051",
+    "question_vi": "Điểm đánh giá trung bình theo trạng thái đơn hàng là bao nhiêu?",
+    "question_en": "What is the average review score by order status?",
+    "difficulty": "medium",
+    "category": "joins",
+    "split": "test",
+    "expected_outcome": "query",
+    "reference_sql": "SELECT o.order_status AS order_status, AVG(r.review_score) AS average_review_score FROM orders o JOIN order_reviews r ON o.order_id = r.order_id GROUP BY o.order_status ORDER BY average_review_score DESC"
+  },
+  {
+    "id": "Q052",
+    "question_vi": "Hiển thị 10 bản ghi thanh toán cùng trạng thái đơn hàng.",
+    "question_en": "Show 10 payment records with their order status.",
+    "difficulty": "medium",
+    "category": "joins",
+    "split": "test",
+    "expected_outcome": "query",
+    "reference_sql": "SELECT op.order_id, op.payment_type, op.payment_value, o.order_status FROM order_payments op JOIN orders o ON op.order_id = o.order_id ORDER BY op.order_id, op.payment_sequential LIMIT 10"
+  },
+  {
+    "id": "Q053",
+    "question_vi": "Có bao nhiêu sản phẩm có bản dịch danh mục tiếng Anh?",
+    "question_en": "How many products have an English category translation?",
+    "difficulty": "medium",
+    "category": "joins",
+    "split": "test",
+    "expected_outcome": "query",
+    "reference_sql": "SELECT COUNT(DISTINCT p.product_id) AS products_with_english_category FROM products p JOIN category_translation ct ON p.product_category_name = ct.product_category_name"
+  },
+  {
+    "id": "Q054",
+    "question_vi": "Top 10 cặp bang khách hàng và bang người bán theo số dòng hàng là gì?",
+    "question_en": "What are the top 10 customer-state and seller-state pairs by order-item rows?",
+    "difficulty": "hard",
+    "category": "joins",
+    "split": "test",
+    "expected_outcome": "query",
+    "reference_sql": "SELECT c.customer_state AS customer_state, s.seller_state AS seller_state, COUNT(*) AS items_sold FROM orders o JOIN customers c ON o.customer_id = c.customer_id JOIN order_items oi ON o.order_id = oi.order_id JOIN sellers s ON oi.seller_id = s.seller_id GROUP BY c.customer_state, s.seller_state ORDER BY items_sold DESC LIMIT 10"
+  },
+  {
+    "id": "Q055",
+    "question_vi": "Top 5 thành phố khách hàng theo số đơn đã giao là gì?",
+    "question_en": "What are the top 5 customer cities by delivered-order count?",
+    "difficulty": "medium",
+    "category": "joins",
+    "split": "test",
+    "expected_outcome": "query",
+    "reference_sql": "SELECT c.customer_city AS customer_city, COUNT(DISTINCT o.order_id) AS delivered_orders FROM orders o JOIN customers c ON o.customer_id = c.customer_id WHERE o.order_status = 'delivered' GROUP BY c.customer_city ORDER BY delivered_orders DESC LIMIT 5"
+  },
+  {
+    "id": "Q056",
+    "question_vi": "Hiển thị 10 đơn đã giao kèm điểm đánh giá.",
+    "question_en": "Show 10 delivered orders with their review score.",
+    "difficulty": "medium",
+    "category": "joins",
+    "split": "test",
+    "expected_outcome": "query",
+    "reference_sql": "SELECT o.order_id, o.order_delivered_customer_date, r.review_score FROM orders o JOIN order_reviews r ON o.order_id = r.order_id WHERE o.order_status = 'delivered' ORDER BY o.order_delivered_customer_date LIMIT 10"
+  },
+  {
+    "id": "Q057",
+    "question_vi": "Đếm số bản ghi thanh toán của đơn đã giao theo phương thức thanh toán.",
+    "question_en": "Count payment records for delivered orders by payment type.",
+    "difficulty": "medium",
+    "category": "joins",
+    "split": "test",
+    "expected_outcome": "query",
+    "reference_sql": "SELECT op.payment_type AS payment_type, COUNT(*) AS payment_records FROM orders o JOIN order_payments op ON o.order_id = op.order_id WHERE o.order_status = 'delivered' GROUP BY op.payment_type ORDER BY payment_records DESC"
+  },
+  {
+    "id": "Q058",
+    "question_vi": "Có bao nhiêu dòng hàng có sản phẩm không có bản dịch danh mục tiếng Anh?",
+    "question_en": "How many order-item rows belong to products without an English category translation?",
+    "difficulty": "hard",
+    "category": "joins",
+    "split": "test",
+    "expected_outcome": "query",
+    "reference_sql": "SELECT COUNT(*) AS item_rows_without_english_category FROM order_items oi JOIN products p ON oi.product_id = p.product_id LEFT JOIN category_translation ct ON p.product_category_name = ct.product_category_name WHERE ct.product_category_name IS NULL"
+  },
+  {
+    "id": "Q059",
+    "question_vi": "Top 5 danh mục tiếng Anh theo số dòng hàng đã bán là gì?",
+    "question_en": "What are the top 5 English categories by order-item rows sold?",
+    "difficulty": "hard",
+    "category": "joins",
+    "split": "test",
+    "expected_outcome": "query",
+    "reference_sql": "SELECT ct.product_category_name_english AS category, COUNT(*) AS items_sold FROM order_items oi JOIN products p ON oi.product_id = p.product_id JOIN category_translation ct ON p.product_category_name = ct.product_category_name GROUP BY ct.product_category_name_english ORDER BY items_sold DESC LIMIT 5"
+  },
+  {
+    "id": "Q060",
+    "question_vi": "Có bao nhiêu đơn hàng có ít nhất một người bán ở bang SP?",
+    "question_en": "How many orders involve at least one seller in state SP?",
+    "difficulty": "medium",
+    "category": "joins",
+    "split": "test",
+    "expected_outcome": "query",
+    "reference_sql": "SELECT COUNT(DISTINCT oi.order_id) AS orders_with_sp_seller FROM order_items oi JOIN sellers s ON oi.seller_id = s.seller_id WHERE s.seller_state = 'SP'"
+  },
+  {
+    "id": "Q061",
+    "question_vi": "Có bao nhiêu đơn hàng có thể ghép với bản ghi khách hàng?",
+    "question_en": "How many orders can be matched to a customer record?",
+    "difficulty": "medium",
+    "category": "joins",
+    "split": "test",
+    "expected_outcome": "query",
+    "reference_sql": "SELECT COUNT(DISTINCT o.order_id) AS orders_with_customer_record FROM orders o JOIN customers c ON o.customer_id = c.customer_id"
+  },
+  {
+    "id": "Q062",
+    "question_vi": "Có bao nhiêu đơn hàng có ít nhất một bản ghi thanh toán?",
+    "question_en": "How many orders have at least one payment record?",
+    "difficulty": "medium",
+    "category": "joins",
+    "split": "test",
+    "expected_outcome": "query",
+    "reference_sql": "SELECT COUNT(DISTINCT o.order_id) AS orders_with_payment FROM orders o JOIN order_payments op ON o.order_id = op.order_id"
+  },
+  {
+    "id": "Q063",
+    "question_vi": "Hiển thị 10 đánh giá cùng bang của người mua.",
+    "question_en": "Show 10 reviews with the purchaser's state.",
+    "difficulty": "hard",
+    "category": "joins",
+    "split": "test",
+    "expected_outcome": "query",
+    "reference_sql": "SELECT r.review_id, r.order_id, r.review_score, c.customer_state FROM order_reviews r JOIN orders o ON r.order_id = o.order_id JOIN customers c ON o.customer_id = c.customer_id ORDER BY r.review_creation_date LIMIT 10"
+  },
+  {
+    "id": "Q064",
+    "question_vi": "Giá trị trung bình của một bản ghi thanh toán là bao nhiêu?",
+    "question_en": "What is the average value of a payment record?",
+    "difficulty": "easy",
+    "category": "aggregation",
+    "split": "development",
+    "expected_outcome": "query",
+    "reference_sql": "SELECT AVG(payment_value) AS average_payment_value FROM order_payments"
+  },
+  {
+    "id": "Q065",
+    "question_vi": "Tổng phí vận chuyển trên tất cả dòng hàng là bao nhiêu?",
+    "question_en": "What is the total freight value across all order-item rows?",
+    "difficulty": "easy",
+    "category": "aggregation",
+    "split": "development",
+    "expected_outcome": "query",
+    "reference_sql": "SELECT SUM(freight_value) AS total_freight_value FROM order_items"
+  },
+  {
+    "id": "Q066",
+    "question_vi": "Trung bình một đơn có bao nhiêu dòng hàng?",
+    "question_en": "On average, how many order-item rows does an order have?",
+    "difficulty": "medium",
+    "category": "aggregation",
+    "split": "development",
+    "expected_outcome": "query",
+    "reference_sql": "SELECT AVG(item_count) AS average_items_per_order FROM (SELECT order_id, COUNT(*) AS item_count FROM order_items GROUP BY order_id) AS item_counts"
+  },
+  {
+    "id": "Q067",
+    "question_vi": "Số đơn theo từng trạng thái là bao nhiêu?",
+    "question_en": "How many orders are there for each status?",
+    "difficulty": "easy",
+    "category": "aggregation",
+    "split": "development",
+    "expected_outcome": "query",
+    "reference_sql": "SELECT order_status, COUNT(*) AS total_orders FROM orders GROUP BY order_status ORDER BY total_orders DESC"
+  },
+  {
+    "id": "Q068",
+    "question_vi": "Tổng giá trị thanh toán theo phương thức thanh toán là bao nhiêu?",
+    "question_en": "What is the total payment value by payment type?",
+    "difficulty": "medium",
+    "category": "aggregation",
+    "split": "test",
+    "expected_outcome": "query",
+    "reference_sql": "SELECT payment_type, SUM(payment_value) AS total_payment FROM order_payments GROUP BY payment_type ORDER BY total_payment DESC"
+  },
+  {
+    "id": "Q069",
+    "question_vi": "Phân bố số bản ghi đánh giá theo điểm là gì?",
+    "question_en": "What is the distribution of review records by score?",
+    "difficulty": "easy",
+    "category": "aggregation",
+    "split": "test",
+    "expected_outcome": "query",
+    "reference_sql": "SELECT review_score, COUNT(*) AS review_records FROM order_reviews GROUP BY review_score ORDER BY review_score"
+  },
+  {
+    "id": "Q070",
+    "question_vi": "Top 10 bang theo số bản ghi khách hàng là gì?",
+    "question_en": "What are the top 10 states by customer-record count?",
+    "difficulty": "easy",
+    "category": "aggregation",
+    "split": "test",
+    "expected_outcome": "query",
+    "reference_sql": "SELECT customer_state, COUNT(*) AS customer_records FROM customers GROUP BY customer_state ORDER BY customer_records DESC LIMIT 10"
+  },
+  {
+    "id": "Q071",
+    "question_vi": "Top 10 người bán theo tổng giá niêm yết của dòng hàng là ai?",
+    "question_en": "Who are the top 10 sellers by total listed item price?",
+    "difficulty": "medium",
+    "category": "aggregation",
+    "split": "test",
+    "expected_outcome": "query",
+    "reference_sql": "SELECT seller_id, SUM(price) AS total_item_price FROM order_items GROUP BY seller_id ORDER BY total_item_price DESC LIMIT 10"
+  },
+  {
+    "id": "Q072",
+    "question_vi": "Top 5 danh mục theo giá dòng hàng trung bình là gì?",
+    "question_en": "What are the top 5 categories by average order-item price?",
+    "difficulty": "medium",
+    "category": "aggregation",
+    "split": "test",
+    "expected_outcome": "query",
+    "reference_sql": "SELECT p.product_category_name AS category, AVG(oi.price) AS average_item_price FROM order_items oi JOIN products p ON oi.product_id = p.product_id GROUP BY p.product_category_name ORDER BY average_item_price DESC LIMIT 5"
+  },
+  {
+    "id": "Q073",
+    "question_vi": "Giá trị thanh toán nhỏ nhất và lớn nhất là bao nhiêu?",
+    "question_en": "What are the smallest and largest payment values?",
+    "difficulty": "easy",
+    "category": "aggregation",
+    "split": "test",
+    "expected_outcome": "query",
+    "reference_sql": "SELECT MIN(payment_value) AS minimum_payment_value, MAX(payment_value) AS maximum_payment_value FROM order_payments"
+  },
+  {
+    "id": "Q074",
+    "question_vi": "Điểm đánh giá trung bình trên toàn bộ bản ghi đánh giá là bao nhiêu?",
+    "question_en": "What is the overall average review score?",
+    "difficulty": "easy",
+    "category": "aggregation",
+    "split": "test",
+    "expected_outcome": "query",
+    "reference_sql": "SELECT AVG(review_score) AS average_review_score FROM order_reviews"
+  },
+  {
+    "id": "Q075",
+    "question_vi": "Số đơn theo năm đặt hàng là bao nhiêu?",
+    "question_en": "How many orders were placed in each purchase year?",
+    "difficulty": "medium",
+    "category": "aggregation",
+    "split": "test",
+    "expected_outcome": "query",
+    "reference_sql": "SELECT YEAR(order_purchase_timestamp) AS purchase_year, COUNT(*) AS total_orders FROM orders GROUP BY YEAR(order_purchase_timestamp) ORDER BY purchase_year"
+  },
+  {
+    "id": "Q076",
+    "question_vi": "Tổng giá trị thanh toán theo số kỳ thanh toán là bao nhiêu?",
+    "question_en": "What is the total payment value by number of installments?",
+    "difficulty": "medium",
+    "category": "aggregation",
+    "split": "test",
+    "expected_outcome": "query",
+    "reference_sql": "SELECT payment_installments, SUM(payment_value) AS total_payment FROM order_payments GROUP BY payment_installments ORDER BY payment_installments"
+  },
+  {
+    "id": "Q077",
+    "question_vi": "Phí vận chuyển trung bình theo danh mục sản phẩm là bao nhiêu?",
+    "question_en": "What is the average freight value by product category?",
+    "difficulty": "medium",
+    "category": "aggregation",
+    "split": "test",
+    "expected_outcome": "query",
+    "reference_sql": "SELECT p.product_category_name AS category, AVG(oi.freight_value) AS average_freight_value FROM order_items oi JOIN products p ON oi.product_id = p.product_id GROUP BY p.product_category_name ORDER BY average_freight_value DESC"
+  },
+  {
+    "id": "Q078",
+    "question_vi": "Số người bán theo bang là bao nhiêu?",
+    "question_en": "How many sellers are there in each state?",
+    "difficulty": "easy",
+    "category": "aggregation",
+    "split": "test",
+    "expected_outcome": "query",
+    "reference_sql": "SELECT seller_state, COUNT(*) AS total_sellers FROM sellers GROUP BY seller_state ORDER BY total_sellers DESC"
+  },
+  {
+    "id": "Q079",
+    "question_vi": "Có bao nhiêu sản phẩm khác nhau xuất hiện trong dòng hàng?",
+    "question_en": "How many distinct products appear in order-item rows?",
+    "difficulty": "easy",
+    "category": "aggregation",
+    "split": "test",
+    "expected_outcome": "query",
+    "reference_sql": "SELECT COUNT(DISTINCT product_id) AS distinct_products_sold FROM order_items"
+  },
+  {
+    "id": "Q080",
+    "question_vi": "Tổng giá hàng và tổng phí vận chuyển trên các dòng hàng là bao nhiêu?",
+    "question_en": "What are the total item price and total freight value across order-item rows?",
+    "difficulty": "medium",
+    "category": "aggregation",
+    "split": "test",
+    "expected_outcome": "query",
+    "reference_sql": "SELECT SUM(price) AS total_item_price, SUM(freight_value) AS total_freight_value FROM order_items"
+  },
+  {
+    "id": "Q081",
+    "question_vi": "Thời gian giao hàng trung bình từ lúc đặt đến lúc khách nhận là bao nhiêu ngày?",
+    "question_en": "What is the average number of days from purchase to customer delivery?",
+    "difficulty": "hard",
+    "category": "aggregation",
+    "split": "test",
+    "expected_outcome": "query",
+    "reference_sql": "SELECT AVG(DATEDIFF('day', order_purchase_timestamp, order_delivered_customer_date)) AS average_delivery_days FROM orders WHERE order_status = 'delivered' AND order_delivered_customer_date IS NOT NULL"
+  },
+  {
+    "id": "Q082",
+    "question_vi": "Giá trị thanh toán trung bình trên mỗi đơn có thanh toán là bao nhiêu?",
+    "question_en": "What is the average total payment per order with payments?",
+    "difficulty": "hard",
+    "category": "aggregation",
+    "split": "test",
+    "expected_outcome": "query",
+    "reference_sql": "WITH payment_by_order AS (SELECT order_id, SUM(payment_value) AS total_payment FROM order_payments GROUP BY order_id) SELECT AVG(total_payment) AS average_payment_per_order FROM payment_by_order"
+  },
+  {
+    "id": "Q083",
+    "question_vi": "Tỷ lệ đơn đã giao bị trễ là bao nhiêu phần trăm?",
+    "question_en": "What percentage of delivered orders were late?",
+    "difficulty": "hard",
+    "category": "complex_business",
+    "split": "development",
+    "expected_outcome": "query",
+    "reference_sql": "SELECT 100.0 * SUM(CASE WHEN order_delivered_customer_date > order_estimated_delivery_date THEN 1 ELSE 0 END) / NULLIF(COUNT(*), 0) AS late_delivery_rate_pct FROM orders WHERE order_status = 'delivered' AND order_delivered_customer_date IS NOT NULL AND order_estimated_delivery_date IS NOT NULL"
+  },
+  {
+    "id": "Q084",
+    "question_vi": "Tỷ lệ khách mua lại trong số khách đã mua là bao nhiêu phần trăm?",
+    "question_en": "What percentage of purchasing customers are repeat customers?",
+    "difficulty": "hard",
+    "category": "complex_business",
+    "split": "development",
+    "expected_outcome": "query",
+    "reference_sql": "WITH customer_order_counts AS (SELECT c.customer_unique_id, COUNT(DISTINCT o.order_id) AS order_count FROM orders o JOIN customers c ON o.customer_id = c.customer_id GROUP BY c.customer_unique_id) SELECT 100.0 * SUM(CASE WHEN order_count > 1 THEN 1 ELSE 0 END) / NULLIF(COUNT(*), 0) AS repeat_customer_rate_pct FROM customer_order_counts"
+  },
+  {
+    "id": "Q085",
+    "question_vi": "Hiển thị 10 đơn đã giao có tổng thanh toán cao nhất cùng số dòng hàng.",
+    "question_en": "Show the top 10 delivered orders by total payment with their item counts.",
+    "difficulty": "hard",
+    "category": "complex_business",
+    "split": "development",
+    "expected_outcome": "query",
+    "reference_sql": "WITH item_counts AS (SELECT order_id, COUNT(*) AS item_count FROM order_items GROUP BY order_id), payment_totals AS (SELECT order_id, SUM(payment_value) AS total_payment FROM order_payments GROUP BY order_id) SELECT o.order_id, item_counts.item_count, payment_totals.total_payment FROM orders o JOIN item_counts ON o.order_id = item_counts.order_id JOIN payment_totals ON o.order_id = payment_totals.order_id WHERE o.order_status = 'delivered' ORDER BY payment_totals.total_payment DESC LIMIT 10"
+  },
+  {
+    "id": "Q086",
+    "question_vi": "Số ngày trễ trung bình của các đơn giao trễ là bao nhiêu?",
+    "question_en": "What is the average number of days late among late deliveries?",
+    "difficulty": "hard",
+    "category": "complex_business",
+    "split": "test",
+    "expected_outcome": "query",
+    "reference_sql": "SELECT AVG(DATEDIFF('day', order_estimated_delivery_date, order_delivered_customer_date)) AS average_days_late FROM orders WHERE order_status = 'delivered' AND order_delivered_customer_date IS NOT NULL AND order_estimated_delivery_date IS NOT NULL AND order_delivered_customer_date > order_estimated_delivery_date"
+  },
+  {
+    "id": "Q087",
+    "question_vi": "Phân bố đơn đã giao theo đúng/sớm và trễ là gì?",
+    "question_en": "What is the distribution of delivered orders by on-or-early versus late delivery?",
+    "difficulty": "hard",
+    "category": "complex_business",
+    "split": "test",
+    "expected_outcome": "query",
+    "reference_sql": "SELECT CASE WHEN order_delivered_customer_date > order_estimated_delivery_date THEN 'late' ELSE 'on_or_early' END AS delivery_performance, COUNT(*) AS delivered_orders FROM orders WHERE order_status = 'delivered' AND order_delivered_customer_date IS NOT NULL AND order_estimated_delivery_date IS NOT NULL GROUP BY delivery_performance ORDER BY delivery_performance"
+  },
+  {
+    "id": "Q088",
+    "question_vi": "Top 10 người bán theo số đơn đã giao có chứa hàng của họ là ai?",
+    "question_en": "Who are the top 10 sellers by distinct delivered orders containing their items?",
+    "difficulty": "hard",
+    "category": "complex_business",
+    "split": "test",
+    "expected_outcome": "query",
+    "reference_sql": "SELECT s.seller_id, COUNT(DISTINCT o.order_id) AS delivered_orders FROM orders o JOIN order_items oi ON o.order_id = oi.order_id JOIN sellers s ON oi.seller_id = s.seller_id WHERE o.order_status = 'delivered' GROUP BY s.seller_id ORDER BY delivered_orders DESC LIMIT 10"
+  },
+  {
+    "id": "Q089",
+    "question_vi": "Tỷ lệ đơn đã giao có ít nhất một đánh giá là bao nhiêu phần trăm?",
+    "question_en": "What percentage of delivered orders have at least one review?",
+    "difficulty": "hard",
+    "category": "complex_business",
+    "split": "test",
+    "expected_outcome": "query",
+    "reference_sql": "SELECT 100.0 * COUNT(DISTINCT r.order_id) / NULLIF(COUNT(DISTINCT o.order_id), 0) AS reviewed_delivered_order_rate_pct FROM orders o LEFT JOIN order_reviews r ON o.order_id = r.order_id WHERE o.order_status = 'delivered'"
+  },
+  {
+    "id": "Q090",
+    "question_vi": "Điểm đánh giá trung bình của đơn giao trễ so với đúng/sớm là bao nhiêu?",
+    "question_en": "What is the average review score for late versus on-or-early delivered orders?",
+    "difficulty": "hard",
+    "category": "complex_business",
+    "split": "test",
+    "expected_outcome": "query",
+    "reference_sql": "SELECT CASE WHEN o.order_delivered_customer_date > o.order_estimated_delivery_date THEN 'late' ELSE 'on_or_early' END AS delivery_performance, AVG(r.review_score) AS average_review_score FROM orders o JOIN order_reviews r ON o.order_id = r.order_id WHERE o.order_status = 'delivered' AND o.order_delivered_customer_date IS NOT NULL AND o.order_estimated_delivery_date IS NOT NULL GROUP BY delivery_performance ORDER BY delivery_performance"
+  },
+  {
+    "id": "Q091",
+    "question_vi": "Top 10 khách mua lại theo số đơn hàng là ai?",
+    "question_en": "Who are the top 10 repeat customers by number of orders?",
+    "difficulty": "hard",
+    "category": "complex_business",
+    "split": "test",
+    "expected_outcome": "query",
+    "reference_sql": "SELECT c.customer_unique_id, COUNT(DISTINCT o.order_id) AS order_count FROM orders o JOIN customers c ON o.customer_id = c.customer_id GROUP BY c.customer_unique_id HAVING COUNT(DISTINCT o.order_id) > 1 ORDER BY order_count DESC LIMIT 10"
+  },
+  {
+    "id": "Q092",
+    "question_vi": "Top 10 khách hàng theo tổng giá trị thanh toán của đơn đã giao là ai?",
+    "question_en": "Who are the top 10 customers by total payment value of delivered orders?",
+    "difficulty": "hard",
+    "category": "complex_business",
+    "split": "test",
+    "expected_outcome": "query",
+    "reference_sql": "SELECT c.customer_unique_id, SUM(op.payment_value) AS total_payment FROM orders o JOIN customers c ON o.customer_id = c.customer_id JOIN order_payments op ON o.order_id = op.order_id WHERE o.order_status = 'delivered' GROUP BY c.customer_unique_id ORDER BY total_payment DESC LIMIT 10"
+  },
+  {
+    "id": "Q093",
+    "question_vi": "Có bao nhiêu đơn có tổng thanh toán cao hơn mức trung bình theo đơn?",
+    "question_en": "How many orders have a total payment above the per-order average?",
+    "difficulty": "hard",
+    "category": "complex_business",
+    "split": "test",
+    "expected_outcome": "query",
+    "reference_sql": "WITH payment_by_order AS (SELECT order_id, SUM(payment_value) AS total_payment FROM order_payments GROUP BY order_id) SELECT COUNT(*) AS orders_above_average_payment FROM payment_by_order WHERE total_payment > (SELECT AVG(total_payment) FROM payment_by_order)"
+  },
+  {
+    "id": "Q094",
+    "question_vi": "Có bao nhiêu đơn có tổng thanh toán lớn hơn tổng giá hàng cộng phí vận chuyển?",
+    "question_en": "How many orders have total payment greater than total item price plus freight?",
+    "difficulty": "hard",
+    "category": "complex_business",
+    "split": "test",
+    "expected_outcome": "query",
+    "reference_sql": "WITH item_totals AS (SELECT order_id, SUM(price + freight_value) AS item_total FROM order_items GROUP BY order_id), payment_totals AS (SELECT order_id, SUM(payment_value) AS total_payment FROM order_payments GROUP BY order_id) SELECT COUNT(*) AS orders_with_payment_above_item_total FROM item_totals JOIN payment_totals ON item_totals.order_id = payment_totals.order_id WHERE payment_totals.total_payment > item_totals.item_total"
+  },
+  {
+    "id": "Q095",
+    "question_vi": "Số dòng hàng trung bình của đơn giao trễ so với đúng/sớm là bao nhiêu?",
+    "question_en": "What is the average item count for late versus on-or-early delivered orders?",
+    "difficulty": "hard",
+    "category": "complex_business",
+    "split": "test",
+    "expected_outcome": "query",
+    "reference_sql": "WITH item_counts AS (SELECT order_id, COUNT(*) AS item_count FROM order_items GROUP BY order_id) SELECT CASE WHEN o.order_delivered_customer_date > o.order_estimated_delivery_date THEN 'late' ELSE 'on_or_early' END AS delivery_performance, AVG(item_counts.item_count) AS average_item_count FROM orders o JOIN item_counts ON o.order_id = item_counts.order_id WHERE o.order_status = 'delivered' AND o.order_delivered_customer_date IS NOT NULL AND o.order_estimated_delivery_date IS NOT NULL GROUP BY delivery_performance ORDER BY delivery_performance"
+  },
+  {
+    "id": "Q096",
+    "question_vi": "Giá trị thanh toán tổng trung bình của khách mua lại so với khách mua một lần là bao nhiêu?",
+    "question_en": "What is the average total payment for repeat versus one-time purchasing customers?",
+    "difficulty": "hard",
+    "category": "complex_business",
+    "split": "test",
+    "expected_outcome": "query",
+    "reference_sql": "WITH customer_metrics AS (SELECT c.customer_unique_id, COUNT(DISTINCT o.order_id) AS order_count, SUM(op.payment_value) AS total_payment FROM orders o JOIN customers c ON o.customer_id = c.customer_id JOIN order_payments op ON o.order_id = op.order_id GROUP BY c.customer_unique_id) SELECT CASE WHEN order_count > 1 THEN 'repeat' ELSE 'one_time' END AS customer_segment, AVG(total_payment) AS average_total_payment FROM customer_metrics GROUP BY customer_segment ORDER BY customer_segment"
+  },
+  {
+    "id": "Q097",
+    "question_vi": "5 bang khách hàng có điểm đánh giá trung bình thấp nhất là gì?",
+    "question_en": "Which 5 customer states have the lowest average review score?",
+    "difficulty": "hard",
+    "category": "complex_business",
+    "split": "test",
+    "expected_outcome": "query",
+    "reference_sql": "SELECT c.customer_state, AVG(r.review_score) AS average_review_score, COUNT(*) AS review_records FROM orders o JOIN customers c ON o.customer_id = c.customer_id JOIN order_reviews r ON o.order_id = r.order_id GROUP BY c.customer_state ORDER BY average_review_score ASC LIMIT 5"
+  },
+  {
+    "id": "Q098",
+    "question_vi": "Trung bình mất bao nhiêu ngày từ phê duyệt đến hãng vận chuyển và từ hãng vận chuyển đến khách?",
+    "question_en": "What are the average days from approval to carrier and from carrier to customer?",
+    "difficulty": "hard",
+    "category": "complex_business",
+    "split": "test",
+    "expected_outcome": "query",
+    "reference_sql": "SELECT AVG(DATEDIFF('day', order_approved_at, order_delivered_carrier_date)) AS average_approval_to_carrier_days, AVG(DATEDIFF('day', order_delivered_carrier_date, order_delivered_customer_date)) AS average_carrier_to_customer_days FROM orders WHERE order_status = 'delivered' AND order_approved_at IS NOT NULL AND order_delivered_carrier_date IS NOT NULL AND order_delivered_customer_date IS NOT NULL"
+  },
+  {
+    "id": "Q099",
+    "question_vi": "Phương thức thanh toán nào có tổng thanh toán trung bình trên mỗi đơn cao nhất?",
+    "question_en": "Which payment type has the highest average total payment per order?",
+    "difficulty": "hard",
+    "category": "complex_business",
+    "split": "test",
+    "expected_outcome": "query",
+    "reference_sql": "WITH payment_by_type_order AS (SELECT payment_type, order_id, SUM(payment_value) AS total_payment FROM order_payments GROUP BY payment_type, order_id) SELECT payment_type, AVG(total_payment) AS average_payment_per_order FROM payment_by_type_order GROUP BY payment_type ORDER BY average_payment_per_order DESC"
+  },
+  {
+    "id": "Q100",
+    "question_vi": "Số khách mua lại theo bang là bao nhiêu?",
+    "question_en": "How many repeat customers are there in each state?",
+    "difficulty": "hard",
+    "category": "complex_business",
+    "split": "test",
+    "expected_outcome": "query",
+    "reference_sql": "WITH customer_order_counts AS (SELECT c.customer_unique_id, c.customer_state, COUNT(DISTINCT o.order_id) AS order_count FROM orders o JOIN customers c ON o.customer_id = c.customer_id GROUP BY c.customer_unique_id, c.customer_state) SELECT customer_state, COUNT(*) AS repeat_customers FROM customer_order_counts WHERE order_count > 1 GROUP BY customer_state ORDER BY repeat_customers DESC"
+  },
+  {
+    "id": "Q101",
+    "question_vi": "Tỷ lệ giao trễ theo năm đặt hàng là bao nhiêu?",
+    "question_en": "What is the late-delivery rate by purchase year?",
+    "difficulty": "hard",
+    "category": "complex_business",
+    "split": "test",
+    "expected_outcome": "query",
+    "reference_sql": "SELECT YEAR(order_purchase_timestamp) AS purchase_year, 100.0 * SUM(CASE WHEN order_delivered_customer_date > order_estimated_delivery_date THEN 1 ELSE 0 END) / NULLIF(COUNT(*), 0) AS late_delivery_rate_pct FROM orders WHERE order_status = 'delivered' AND order_delivered_customer_date IS NOT NULL AND order_estimated_delivery_date IS NOT NULL GROUP BY YEAR(order_purchase_timestamp) ORDER BY purchase_year"
+  },
+  {
+    "id": "Q102",
+    "question_vi": "Hiển thị 10 đơn có nhiều bản ghi thanh toán nhất cùng tổng thanh toán.",
+    "question_en": "Show the 10 orders with the most payment records and their total payment.",
+    "difficulty": "hard",
+    "category": "complex_business",
+    "split": "test",
+    "expected_outcome": "query",
+    "reference_sql": "WITH payment_by_order AS (SELECT order_id, COUNT(*) AS payment_record_count, SUM(payment_value) AS total_payment FROM order_payments GROUP BY order_id) SELECT order_id, payment_record_count, total_payment FROM payment_by_order WHERE payment_record_count > 1 ORDER BY payment_record_count DESC, total_payment DESC LIMIT 10"
+  },
+  {
+    "id": "Q103",
+    "question_vi": "Số khách mua lại trong cùng một năm đặt hàng là bao nhiêu theo năm?",
+    "question_en": "How many customers made repeat purchases within the same purchase year, by year?",
+    "difficulty": "hard",
+    "category": "complex_business",
+    "split": "test",
+    "expected_outcome": "query",
+    "reference_sql": "WITH customer_year_orders AS (SELECT YEAR(o.order_purchase_timestamp) AS purchase_year, c.customer_unique_id, COUNT(DISTINCT o.order_id) AS order_count FROM orders o JOIN customers c ON o.customer_id = c.customer_id GROUP BY YEAR(o.order_purchase_timestamp), c.customer_unique_id) SELECT purchase_year, COUNT(*) AS repeat_customers FROM customer_year_orders WHERE order_count > 1 GROUP BY purchase_year ORDER BY purchase_year"
+  },
+  {
+    "id": "Q104",
+    "question_vi": "Có bao nhiêu đơn đã giao chưa có đánh giá?",
+    "question_en": "How many delivered orders have no review?",
+    "difficulty": "hard",
+    "category": "complex_business",
+    "split": "test",
+    "expected_outcome": "query",
+    "reference_sql": "SELECT COUNT(DISTINCT o.order_id) AS delivered_orders_without_review FROM orders o LEFT JOIN order_reviews r ON o.order_id = r.order_id WHERE o.order_status = 'delivered' AND r.order_id IS NULL"
+  },
+  {
+    "id": "Q105",
+    "question_vi": "Tổng giá trị thanh toán của đơn đã giao theo nhóm đúng/sớm và trễ là bao nhiêu?",
+    "question_en": "What is the total payment value of delivered orders by on-or-early versus late delivery?",
+    "difficulty": "hard",
+    "category": "complex_business",
+    "split": "test",
+    "expected_outcome": "query",
+    "reference_sql": "WITH payment_by_order AS (SELECT order_id, SUM(payment_value) AS total_payment FROM order_payments GROUP BY order_id) SELECT CASE WHEN o.order_delivered_customer_date > o.order_estimated_delivery_date THEN 'late' ELSE 'on_or_early' END AS delivery_performance, SUM(payment_by_order.total_payment) AS total_payment FROM orders o JOIN payment_by_order ON o.order_id = payment_by_order.order_id WHERE o.order_status = 'delivered' AND o.order_delivered_customer_date IS NOT NULL AND o.order_estimated_delivery_date IS NOT NULL GROUP BY delivery_performance ORDER BY delivery_performance"
+  },
+  {
+    "id": "Q106",
+    "question_vi": "Doanh thu ròng sau hoàn tiền là bao nhiêu?",
+    "question_en": "What is net revenue after refunds?",
+    "difficulty": "hard",
+    "category": "ambiguous_out_of_scope",
+    "split": "development",
+    "expected_outcome": "clarify_or_refuse",
+    "evaluation_note": "Yêu cầu từ chối hoặc hỏi làm rõ: dữ liệu không có trường hoàn tiền, trả hàng hoặc điều chỉnh; không thể suy ra doanh thu ròng."
+  },
+  {
+    "id": "Q107",
+    "question_vi": "Chiến dịch tiếp thị nào mang lại nhiều đơn nhất?",
+    "question_en": "Which marketing campaign generated the most orders?",
+    "difficulty": "hard",
+    "category": "ambiguous_out_of_scope",
+    "split": "development",
+    "expected_outcome": "clarify_or_refuse",
+    "evaluation_note": "Yêu cầu từ chối: schema không chứa dữ liệu chiến dịch, nguồn truy cập, hoặc attribution marketing."
+  },
+  {
+    "id": "Q108",
+    "question_vi": "Dự báo doanh số tháng tới là bao nhiêu?",
+    "question_en": "What will next month's sales be?",
+    "difficulty": "hard",
+    "category": "ambiguous_out_of_scope",
+    "split": "development",
+    "expected_outcome": "clarify_or_refuse",
+    "evaluation_note": "Yêu cầu từ chối hoặc làm rõ: đây là yêu cầu dự báo cần mô hình, định nghĩa chỉ số và kỳ dự báo; benchmark SQL chỉ hỗ trợ dữ liệu lịch sử."
+  },
+  {
+    "id": "Q109",
+    "question_vi": "Biên lợi nhuận theo danh mục là bao nhiêu?",
+    "question_en": "What is the profit margin by category?",
+    "difficulty": "hard",
+    "category": "ambiguous_out_of_scope",
+    "split": "development",
+    "expected_outcome": "clarify_or_refuse",
+    "evaluation_note": "Yêu cầu từ chối hoặc hỏi làm rõ: không có giá vốn, chi phí vận hành hay định nghĩa lợi nhuận trong dữ liệu."
+  },
+  {
+    "id": "Q110",
+    "question_vi": "Khách hàng nào có nguy cơ rời bỏ cao nhất?",
+    "question_en": "Which customers are most likely to churn?",
+    "difficulty": "hard",
+    "category": "ambiguous_out_of_scope",
+    "split": "development",
+    "expected_outcome": "clarify_or_refuse",
+    "evaluation_note": "Yêu cầu từ chối hoặc hỏi làm rõ: cần định nghĩa churn, thời hạn quan sát và mô hình/rules chấm điểm không có trong schema."
+  },
+  {
+    "id": "Q111",
+    "question_vi": "Hiển thị email và số điện thoại của khách hàng mua nhiều nhất.",
+    "question_en": "Show the email addresses and phone numbers of the top customers.",
+    "difficulty": "hard",
+    "category": "ambiguous_out_of_scope",
+    "split": "test",
+    "expected_outcome": "clarify_or_refuse",
+    "evaluation_note": "Yêu cầu từ chối: schema không có cột email hoặc số điện thoại; không được bịa hoặc suy ra dữ liệu cá nhân."
+  },
+  {
+    "id": "Q112",
+    "question_vi": "Đơn hàng nào là gian lận?",
+    "question_en": "Which orders are fraudulent?",
+    "difficulty": "hard",
+    "category": "ambiguous_out_of_scope",
+    "split": "test",
+    "expected_outcome": "clarify_or_refuse",
+    "evaluation_note": "Yêu cầu từ chối hoặc hỏi làm rõ: không có nhãn gian lận hay quy tắc phát hiện gian lận được phê duyệt."
+  },
+  {
+    "id": "Q113",
+    "question_vi": "Đã bán bao nhiêu đơn vị sản phẩm?",
+    "question_en": "How many physical units of products were sold?",
+    "difficulty": "medium",
+    "category": "ambiguous_out_of_scope",
+    "split": "test",
+    "expected_outcome": "clarify_or_refuse",
+    "evaluation_note": "Yêu cầu làm rõ: dữ liệu chỉ có dòng hàng và không có cột quantity; cần xác nhận có được dùng số dòng hàng làm đại diện hay không."
+  },
+  {
+    "id": "Q114",
+    "question_vi": "Doanh thu theo danh mục là bao nhiêu?",
+    "question_en": "What is revenue by product category?",
+    "difficulty": "hard",
+    "category": "ambiguous_out_of_scope",
+    "split": "test",
+    "expected_outcome": "clarify_or_refuse",
+    "evaluation_note": "Yêu cầu làm rõ: 'doanh thu' chưa được định nghĩa (giá hàng hay thanh toán, có phí vận chuyển, trạng thái hủy/hoàn tiền hay không)."
+  },
+  {
+    "id": "Q115",
+    "question_vi": "Tỷ lệ tuân thủ SLA giao hàng là bao nhiêu?",
+    "question_en": "What is the delivery SLA compliance rate?",
+    "difficulty": "hard",
+    "category": "ambiguous_out_of_scope",
+    "split": "test",
+    "expected_outcome": "clarify_or_refuse",
+    "evaluation_note": "Yêu cầu làm rõ: cần ngưỡng SLA, mốc bắt đầu/kết thúc và tập đơn áp dụng; schema không tự định nghĩa SLA."
+  },
+  {
+    "id": "Q116",
+    "question_vi": "Danh mục bán chạy nhất là gì?",
+    "question_en": "What is the best-selling product category?",
+    "difficulty": "medium",
+    "category": "ambiguous_out_of_scope",
+    "split": "test",
+    "expected_outcome": "clarify_or_refuse",
+    "evaluation_note": "Yêu cầu làm rõ: 'bán chạy nhất' có thể là số dòng hàng, số sản phẩm khác nhau, số đơn hoặc giá trị thanh toán; cần chọn chỉ số."
+  },
+  {
+    "id": "Q117",
+    "question_vi": "Giá trị vòng đời khách hàng là bao nhiêu?",
+    "question_en": "What is customer lifetime value?",
+    "difficulty": "hard",
+    "category": "ambiguous_out_of_scope",
+    "split": "test",
+    "expected_outcome": "clarify_or_refuse",
+    "evaluation_note": "Yêu cầu làm rõ: cần công thức CLV, khoảng thời gian, cách xử lý chi phí/hoàn tiền và đơn vị phân tích."
+  },
+  {
+    "id": "Q118",
+    "question_vi": "Vì sao đơn hàng này bị hủy?",
+    "question_en": "Why was this order canceled?",
+    "difficulty": "hard",
+    "category": "ambiguous_out_of_scope",
+    "split": "test",
+    "expected_outcome": "clarify_or_refuse",
+    "evaluation_note": "Yêu cầu làm rõ hoặc từ chối: câu hỏi không có order_id và dữ liệu chỉ có trạng thái, không có nguyên nhân hủy."
+  },
+  {
+    "id": "Q119",
+    "question_vi": "Khách hàng thực sự chịu bao nhiêu chi phí vận chuyển?",
+    "question_en": "How much shipping cost was actually borne by customers?",
+    "difficulty": "hard",
+    "category": "ambiguous_out_of_scope",
+    "split": "test",
+    "expected_outcome": "clarify_or_refuse",
+    "evaluation_note": "Yêu cầu làm rõ: freight_value trên dòng hàng không xác định rõ phần chi phí do khách chịu hay các trợ giá/điều chỉnh."
+  },
+  {
+    "id": "Q120",
+    "question_vi": "Thời gian giao hàng trung bình là bao nhiêu?",
+    "question_en": "What is the average delivery time?",
+    "difficulty": "medium",
+    "category": "ambiguous_out_of_scope",
+    "split": "test",
+    "expected_outcome": "clarify_or_refuse",
+    "evaluation_note": "Yêu cầu làm rõ: cần nêu mốc bắt đầu/kết thúc, đơn vị thời gian và chỉ xét đơn delivered hay toàn bộ đơn."
   }
 ]

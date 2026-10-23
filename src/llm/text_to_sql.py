@@ -146,11 +146,21 @@ def generate_sql(
             "Thiếu thư viện google-genai. Hãy chạy: python -m pip install -r requirements.txt"
         ) from error
 
-    client: Any = genai.Client(api_key=api_key)
-    response = client.models.generate_content(
-        model=model,
-        contents=build_prompt(question, schema, context),
-    )
+    # Use the resolved values rather than the optional call arguments.  This
+    # matters for CLI and evaluation runs, which intentionally rely on .env.
+    try:
+        client: Any = genai.Client(api_key=resolved_api_key)
+        response = client.models.generate_content(
+            model=resolved_model,
+            contents=build_prompt(question, schema, context),
+        )
+    except Exception:
+        # SDK errors can contain transport internals.  Keep the CLI and UI
+        # actionable without exposing credentials, URLs, or local details.
+        raise RuntimeError(
+            "Không thể gọi Gemini API. Hãy kiểm tra API key, quyền truy cập model "
+            "và kết nối mạng rồi thử lại."
+        ) from None
     response_text = getattr(response, "text", None)
     if not response_text:
         raise RuntimeError("Gemini không trả về nội dung SQL. Hãy thử lại với câu hỏi rõ hơn.")
@@ -195,6 +205,10 @@ def main() -> None:
             "SQL do mô hình trả về không vượt qua kiểm tra an toàn; không có truy vấn nào được chạy. "
             f"Chi tiết: {error}"
         ) from error
+    except RuntimeError as error:
+        # ``generate_sql`` has already converted provider failures to a safe,
+        # actionable message. Avoid rendering an SDK traceback in the CLI.
+        raise SystemExit(str(error)) from None
 
     print("\nSQL ĐỀ XUẤT (chưa được thực thi):\n")
     print(sql)

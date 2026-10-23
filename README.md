@@ -119,7 +119,7 @@ python -m pip install -r requirements.txt
 
 *(Trên Linux/macOS, kích hoạt môi trường bằng `source .venv/bin/activate`)*
 
-### 3. Cấu hình API Key (Tùy chọn)
+### 3. Cấu hình API Key
 
 Sao chép `.env.example` thành `.env` nếu bạn muốn nạp sẵn API key:
 ```powershell
@@ -128,9 +128,11 @@ Copy-Item .env.example .env
 Điền thông tin Google AI Studio của bạn:
 ```dotenv
 GEMINI_API_KEY=your_gemini_api_key
-GEMINI_MODEL=gemini-2.5-flash
+GEMINI_MODEL=gemini-3.5-flash-lite
 ```
-*(Lưu ý: Bạn cũng có thể nhập API Key trực tiếp trên sidebar giao diện Streamlit mà không bắt buộc phải sửa file `.env`)*
+`app.py` nạp tệp `.env` khi khởi động. Bạn cũng có thể nhập API key trực tiếp
+trên sidebar giao diện Streamlit. Khi chưa cấu hình key, ứng dụng báo lỗi cấu
+hình thay vì dùng `reference_sql` của benchmark làm câu trả lời demo.
 
 ### 4. Dữ liệu và Chỉ mục RAG
 Cơ sở dữ liệu DuckDB (`data/database/olist.duckdb`) và chỉ mục vector ChromaDB (`data/chroma/`) đã được khởi tạo sẵn trong workspace. Nếu cần tái tạo từ đầu:
@@ -178,9 +180,16 @@ python -m src.llm.text_to_sql --use-rag "Có bao nhiêu khách hàng đã mua l�
 
 ### 3. Chạy Benchmark So sánh A/B
 ```powershell
+# Kiểm tra trước một bài toán (hai biến thể tiếng Việt/Anh)
+python -m src.evaluation.compare_rag --question-id Q006
+
+# Sau đó chạy đầy đủ: 120 bài toán, 240 ca ngôn ngữ, 480 lượt sinh SQL
 python -m src.evaluation.compare_rag
 ```
-Kết quả so sánh chi tiết được lưu tại `benchmarks/results/rag_comparison.json`.
+Kết quả có `execution_accuracy`, `valid_sql_rate` và `false_acceptance_rate`
+được lưu tại `benchmarks/results/rag_comparison.json`. Xem
+[`benchmarks/README.md`](benchmarks/README.md) để biết cấu trúc bộ dữ liệu và
+quy tắc đánh giá.
 
 ---
 
@@ -191,7 +200,6 @@ Dự án có bộ kiểm thử tự động toàn diện bao quát tính đúng 
 ```powershell
 python -m pytest -q
 ```
-*Kết quả: 37/37 tests passed 100%.*
 
 ---
 
@@ -201,7 +209,8 @@ python -m pytest -q
 TrustQuery-AI/
 ├── app.py                         # Giao diện chính Streamlit Studio
 ├── benchmarks/
-│   ├── questions.json             # Bộ 8 câu hỏi benchmark chuẩn và reference SQL
+│   ├── questions.json             # 120 bài toán benchmark song ngữ
+│   ├── README.md                  # Hợp đồng split, nhãn và thước đo benchmark
 │   └── results/                   # Kết quả đánh giá A/B
 ├── data/
 │   ├── chroma/                    # Vector store ChromaDB cục bộ

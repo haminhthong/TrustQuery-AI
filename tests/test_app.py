@@ -6,6 +6,8 @@ import app
 import pandas as pd
 import pytest
 import src.llm.text_to_sql as text_to_sql
+import src.validation.sql_validator as sql_validator
+from src.validation.sql_validator import ValidationResult
 
 
 @pytest.mark.requires_olist_database
@@ -36,6 +38,56 @@ def test_unexpected_error_does_not_leak_implementation_details() -> None:
 
     assert "C:/private" not in message
     assert "Không thể hoàn tất" in message
+
+
+def test_missing_key_does_not_substitute_benchmark_reference_sql(monkeypatch) -> None:
+    """Normal questions must reach Gemini rather than borrowing benchmark SQL."""
+    monkeypatch.delenv("GEMINI_API_KEY", raising=False)
+    monkeypatch.setattr(text_to_sql, "get_schema", lambda _db_path: "orders: order_id")
+    generated: list[dict[str, object]] = []
+
+    def generate_fresh_sql(**kwargs: object) -> str:
+        generated.append(kwargs)
+        return "SELECT 1 AS generated_query"
+
+    monkeypatch.setattr(text_to_sql, "generate_sql", generate_fresh_sql)
+    monkeypatch.setattr(
+        sql_validator,
+        "validate_sql",
+        lambda _sql, **_kwargs: ValidationResult(
+            valid=False, errors=["stop before execution"]
+        ),
+    )
+
+    outcome = app.answer_question("Tổng số đơn hàng là bao nhiêu?", use_rag=False)
+
+    assert generated
+    assert outcome.sql == "SELECT 1 AS generated_query"
+    assert outcome.is_demo is False
+
+
+def test_explicit_demo_sql_is_labeled_as_demo(monkeypatch) -> None:
+    """Demo mode is allowed only when a caller supplies its SQL explicitly."""
+    monkeypatch.setattr(text_to_sql, "get_schema", lambda _db_path: "orders: order_id")
+    monkeypatch.setattr(
+        text_to_sql,
+        "generate_sql",
+        lambda **_kwargs: (_ for _ in ()).throw(AssertionError("Gemini was called")),
+    )
+    monkeypatch.setattr(
+        sql_validator,
+        "validate_sql",
+        lambda _sql, **_kwargs: ValidationResult(
+            valid=False, errors=["stop before execution"]
+        ),
+    )
+
+    outcome = app.answer_question(
+        "Demo only", use_rag=False, force_demo_sql="SELECT 1 AS demo_value"
+    )
+
+    assert outcome.sql == "SELECT 1 AS demo_value"
+    assert outcome.is_demo is True
 
 
 @pytest.mark.requires_olist_database

@@ -67,7 +67,7 @@ python -m src.llm.text_to_sql --use-rag "Có bao nhiêu khách hàng đã mua l�
 Cả hai lệnh chỉ in SQL đề xuất. Chúng vẫn cần được kiểm tra bởi con người và
 không tự thực thi câu lệnh lên database.
 
-## Đánh giá A/B cuối tuần 2
+## Đánh giá benchmark song ngữ
 
 Sau khi tạo chỉ mục, cấu hình `.env` với Gemini và xác nhận database đã được
 nạp, chạy:
@@ -76,10 +76,22 @@ nạp, chạy:
 python -m src.evaluation.compare_rag
 ```
 
-Lệnh sử dụng đúng một `benchmarks/questions.json` cho cả hai phiên bản, sau
-đó tạo `benchmarks/results/rag_comparison.json`. Báo cáo giữ lại `reference_sql`,
-ngữ cảnh RAG và hai SQL được sinh; hãy đối chiếu ngữ nghĩa/grain thay vì so
-sánh chuỗi SQL. Có thể chạy một ca trọng tâm, ví dụ:
+Lệnh dùng chung `benchmarks/questions.json` cho cả hai phiên bản và tạo
+`benchmarks/results/rag_comparison.json`. Mỗi bài toán có một prompt tiếng
+Việt và một prompt tiếng Anh. Với 120 bài toán, lần chạy đầy đủ tạo 240 ca
+ngôn ngữ và 480 lượt sinh SQL: schema-only và RAG cho từng ca.
+
+Mọi SQL ứng viên phải qua Validator trước khi được thực thi bằng kết nối
+DuckDB chỉ đọc. Báo cáo so sánh kết quả thực thi với SQL tham chiếu cho các ca
+`query`, đồng thời tổng hợp `execution_accuracy`, `valid_sql_rate`, và
+`false_acceptance_rate`. Biến thể `rag_validation` tái sử dụng SQL của RAG,
+không gọi mô hình lần thứ ba.
+
+Các ca `clarify_or_refuse` không có `reference_sql`, không được thực thi, và
+được ghi rõ là cần đánh giá thủ công về chất lượng từ chối/yêu cầu làm rõ. Chi
+tiết hợp đồng benchmark nằm ở [benchmarks/README.md](../benchmarks/README.md).
+
+Nên chạy một bài toán trước, ví dụ:
 
 ```powershell
 python -m src.evaluation.compare_rag --question-id Q006

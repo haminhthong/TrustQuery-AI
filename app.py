@@ -18,10 +18,13 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
+from dotenv import load_dotenv
+
 from src.database.read_only import connect_read_only
 
 
 ROOT = Path(__file__).resolve().parent
+load_dotenv(ROOT / ".env")
 DB_PATH = ROOT / "data" / "database" / "olist.duckdb"
 BENCHMARK_PATH = ROOT / "benchmarks" / "questions.json"
 MAX_DISPLAY_ROWS = 1_000
@@ -108,6 +111,7 @@ _SAFE_RUNTIME_ERROR_PREFIXES = (
     "Database Olist không chứa bảng",
     "GEMINI_API_KEY",
     "GEMINI_MODEL",
+    "Không thể gọi Gemini API",
     "Gemini không trả về",
     "Thiếu thư viện",
     "Thiếu sqlglot",
@@ -173,41 +177,6 @@ def get_execution_plan(sql: str, db_path: Path = DB_PATH) -> str | None:
         return None
 
 
-def _find_benchmark_reference_sql(question: str) -> str | None:
-    """Find verified reference SQL for benchmark questions if demo fallback is used."""
-    if not BENCHMARK_PATH.is_file():
-        return None
-    try:
-        questions = json.loads(BENCHMARK_PATH.read_text(encoding="utf-8"))
-        norm_q = question.strip().lower()
-        # 1. Exact match
-        for item in questions:
-            if item.get("question_vi", "").strip().lower() == norm_q:
-                return str(item.get("reference_sql"))
-            if item.get("question_en", "").strip().lower() == norm_q:
-                return str(item.get("reference_sql"))
-        # 2. Semantic keyword matching for demo resilience
-        if "mua lại" in norm_q or "repeat" in norm_q:
-            return next((str(q["reference_sql"]) for q in questions if q.get("id") == "Q006"), None)
-        if "giao trễ" in norm_q or "trễ" in norm_q or "late" in norm_q:
-            return next((str(q["reference_sql"]) for q in questions if q.get("id") == "Q008"), None)
-        if "top" in norm_q or "danh mục" in norm_q or "categories" in norm_q:
-            return next((str(q["reference_sql"]) for q in questions if q.get("id") == "Q004"), None)
-        if "đã được giao" in norm_q or "đã giao" in norm_q or "delivered" in norm_q:
-            return next((str(q["reference_sql"]) for q in questions if q.get("id") == "Q002"), None)
-        if "tổng" in norm_q and "đơn" in norm_q or "how many orders" in norm_q:
-            return next((str(q["reference_sql"]) for q in questions if q.get("id") == "Q001"), None)
-        if "thanh toán" in norm_q or "payment" in norm_q:
-            return next((str(q["reference_sql"]) for q in questions if q.get("id") == "Q005"), None)
-        if "duy nhất" in norm_q or "unique" in norm_q:
-            return next((str(q["reference_sql"]) for q in questions if q.get("id") == "Q007"), None)
-        if "năm" in norm_q or "year" in norm_q:
-            return next((str(q["reference_sql"]) for q in questions if q.get("id") == "Q003"), None)
-    except Exception:
-        pass
-    return None
-
-
 def answer_question(
     question: str,
     *,
@@ -231,19 +200,12 @@ def answer_question(
             context = retrieve_context(question)
             outcome.context = context
 
-        # Check if caller specified reference demo SQL or if API key is absent
-        candidate_sql = force_demo_sql
-        if not candidate_sql:
-            active_key = (api_key or os.getenv("GEMINI_API_KEY", "")).strip()
-            if not active_key:
-                # If question matches a known benchmark query, use it as demo mode
-                reference_sql = _find_benchmark_reference_sql(question)
-                if reference_sql:
-                    candidate_sql = reference_sql
-                    outcome.is_demo = True
-
+        # Reference SQL may be used only for an explicitly requested demo.
+        # Evaluation and normal UI requests always call Gemini for a new query.
+        candidate_sql = force_demo_sql.strip() if force_demo_sql else None
         if candidate_sql:
             outcome.sql = candidate_sql
+            outcome.is_demo = True
         else:
             kwargs: dict[str, Any] = {
                 "question": question,
@@ -402,7 +364,7 @@ def render_outcome(st: Any, outcome: QueryOutcome, *, show_context: bool) -> Non
     """Render one assistant response with tabs, execution plans, and metrics."""
     if outcome.is_demo:
         st.markdown(
-            '<span class="tq-status-badge badge-demo">⚡ CHẾ ĐỘ DEMO BENCHMARK (Tham chiếu chuẩn)</span>',
+            '<span class="tq-status-badge badge-demo">⚡ CHẾ ĐỘ DEMO (SQL được chỉ định tường minh)</span>',
             unsafe_allow_html=True,
         )
 
@@ -585,16 +547,36 @@ def _render_knowledge_hub(st: Any) -> None:
 def _render_benchmark_hub(st: Any) -> None:
     """Display benchmark questions and A/B comparison rationale."""
     st.subheader("🔬 Benchmark & Cơ sở Khoa học Đánh giá")
-    st.caption("Bộ 8 câu hỏi benchmark chuẩn hóa để đo lường năng lực Text-to-SQL và RAG.")
 
     if BENCHMARK_PATH.is_file():
         try:
             questions = json.loads(BENCHMARK_PATH.read_text(encoding="utf-8"))
+            st.caption(
+                f"Bộ {len(questions)} bài toán benchmark song ngữ để đo lường "
+                "Text-to-SQL, RAG và Validation. SQL tham chiếu chỉ dùng để đối chiếu, "
+                "không dùng để trả lời thay Gemini."
+            )
             for q in questions:
-                with st.expander(f"[{q.get('id')}] {q.get('question_vi')} ({q.get('difficulty', '').upper()})"):
+                with st.expander(
+                    f"[{q.get('id')}] {q.get('question_vi')} "
+                    f"({q.get('difficulty', '').upper()})"
+                ):
                     st.write(f"**English:** {q.get('question_en')}")
-                    st.markdown("**Reference SQL (Chuẩn đối chiếu):**")
-                    st.code(q.get("reference_sql"), language="sql")
+                    st.caption(
+                        f"Nhóm: {q.get('category', 'unclassified')} · "
+                        f"Split: {q.get('split', 'unassigned')} · "
+                        f"Kỳ vọng: {q.get('expected_outcome', 'query')}"
+                    )
+                    if q.get("expected_outcome", "query") == "query":
+                        st.markdown("**Reference SQL (Chuẩn đối chiếu):**")
+                        st.code(q.get("reference_sql"), language="sql")
+                    else:
+                        st.info(
+                            "Ca này không có SQL chuẩn: hệ thống nên từ chối hoặc "
+                            "yêu cầu làm rõ thay vì bịa dữ liệu."
+                        )
+                        if note := q.get("evaluation_note"):
+                            st.caption(str(note))
         except Exception as exc:
             st.error(f"Không đọc được benchmark: {exc}")
     else:
@@ -634,8 +616,12 @@ def main() -> None:
             st.session_state.gemini_api_key = api_key_input
             os.environ["GEMINI_API_KEY"] = api_key_input
 
-        model_options = ["gemini-2.5-flash", "gemini-1.5-flash", "gemini-1.5-pro"]
-        current_model = os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
+        model_options = [
+            "gemini-3.5-flash-lite",
+            "gemini-3.8-flash",
+            "gemini-2.5-flash",
+        ]
+        current_model = os.getenv("GEMINI_MODEL", "gemini-3.5-flash-lite")
         model_idx = model_options.index(current_model) if current_model in model_options else 0
         selected_model = st.selectbox("Mô hình AI:", model_options, index=model_idx)
         st.session_state.gemini_model = selected_model

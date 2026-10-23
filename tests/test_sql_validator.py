@@ -61,7 +61,8 @@ def test_all_benchmark_reference_queries_validate() -> None:
     invalid = [
         question["id"]
         for question in questions
-        if not validate_sql(question["reference_sql"]).valid
+        if question.get("expected_outcome", "query") == "query"
+        and not validate_sql(question["reference_sql"]).valid
     ]
 
     assert invalid == []
